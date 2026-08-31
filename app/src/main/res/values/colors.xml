@@ -1,0 +1,5 @@
+<resources>
+    <!-- Used only by the adaptive launcher icon below; the app's real palette lives in
+         ui/theme/Color.kt, since every Compose screen reads colors from there, not from XML. -->
+    <color name="ic_launcher_background">#6753E8</color>
+</resources>

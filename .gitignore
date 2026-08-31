@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+/build/
+/app/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# Firebase Admin SDK service account key used by seed/seed.js — grants server-level
+# access to the whole project, never commit it.
+serviceAccountKey.json
+seed/serviceAccountKey.json

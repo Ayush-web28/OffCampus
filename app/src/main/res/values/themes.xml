@@ -1,0 +1,6 @@
+<resources>
+    <!-- This XML theme only paints the window background for the instant before Compose
+         takes over in setContent {} — every actual screen is themed by OffCampusTheme
+         in ui/theme/Theme.kt, not by this file. -->
+    <style name="Theme.OffCampus" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

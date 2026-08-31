@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(GIT_AUTHOR_NAME=\"Ayush\" GIT_AUTHOR_EMAIL=\"ayush.ct0406@gmail.com\" GIT_COMMITTER_NAME=\"Ayush\" GIT_COMMITTER_EMAIL=\"ayush.ct0406@gmail.com\" git commit -m \"Phase 0: Design brief — approved design system spec \\(streetlight & meter concept\\)\")",
+      "Bash(GIT_AUTHOR_NAME=\"Akshat\" GIT_AUTHOR_EMAIL=\"akshatvidyarthi@gmail.com\" GIT_COMMITTER_NAME=\"Akshat\" GIT_COMMITTER_EMAIL=\"akshatvidyarthi@gmail.com\" git commit -m \"Phase 1: Project setup & data model — gradle build, Firebase config, Firestore schema, design system \\(Color/Type/Theme\\)\")",
+      "Bash(rm -f .git/index.lock)",
+      "Bash(git reset *)"
+    ]
+  }
+}

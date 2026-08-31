@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Interim rule for Phases 2-8: any signed-in rider can read/write anything.
+    // Phase 9 replaces this with per-collection ownership rules (e.g. a rider can only
+    // edit their own profile, only a lobby's members can write to it, etc.) plus tests.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

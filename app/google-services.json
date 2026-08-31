@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "523862679183",
+    "project_id": "offcampus-5f370",
+    "storage_bucket": "offcampus-5f370.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:523862679183:android:d5fbf5072e3ee2e1fbdafa",
+        "android_client_info": {
+          "package_name": "com.offcampus.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9oOhJ-ssbg53Qp_nUhVLHnzlyf2f0nTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
