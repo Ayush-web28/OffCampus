@@ -33,6 +33,7 @@ import com.offcampus.app.ui.payment.PostFareScreen
 import com.offcampus.app.ui.payment.TripHistoryScreen
 import com.offcampus.app.ui.profile.AvatarPickerScreen
 import com.offcampus.app.ui.profile.ProfileScreen
+import com.offcampus.app.ui.report.ReportScreen
 
 /**
  * Single top-level nav host, gated entirely by [AuthViewModel.uiState]. Rather than each screen
@@ -178,7 +179,29 @@ fun OffCampusNavHost() {
             ) { entry ->
                 val lobbyId = entry.arguments?.getString("lobbyId")
                 if (lobbyId != null) {
-                    PaymentSplitScreen(lobbyId = lobbyId, onBack = { navController.popBackStack() })
+                    PaymentSplitScreen(
+                        lobbyId = lobbyId,
+                        onBack = { navController.popBackStack() },
+                        onReport = { reportedUserId -> navController.navigate(Routes.report(lobbyId, reportedUserId)) }
+                    )
+                }
+            }
+
+            composable(
+                route = Routes.REPORT_PATTERN,
+                arguments = listOf(
+                    navArgument("lobbyId") { type = NavType.StringType },
+                    navArgument("reportedUserId") { type = NavType.StringType }
+                )
+            ) { entry ->
+                val lobbyId = entry.arguments?.getString("lobbyId")
+                val reportedUserId = entry.arguments?.getString("reportedUserId")
+                if (lobbyId != null && reportedUserId != null) {
+                    ReportScreen(
+                        lobbyId = lobbyId,
+                        reportedUserId = reportedUserId,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
 

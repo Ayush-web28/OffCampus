@@ -13,10 +13,12 @@ object Routes {
     const val POST_FARE_PATTERN = "postFare/{lobbyId}"
     const val PAYMENT_SPLIT_PATTERN = "paymentSplit/{lobbyId}"
     const val TRIP_HISTORY = "tripHistory"
+    const val REPORT_PATTERN = "report/{lobbyId}/{reportedUserId}"
 
     fun lobbyDetail(lobbyId: String) = "lobbyDetail/$lobbyId"
     fun lobbyChat(lobbyId: String) = "lobbyChat/$lobbyId"
     fun friendChat(friendId: String) = "friendChat/$friendId"
     fun postFare(lobbyId: String) = "postFare/$lobbyId"
     fun paymentSplit(lobbyId: String) = "paymentSplit/$lobbyId"
+    fun report(lobbyId: String, reportedUserId: String) = "report/$lobbyId/$reportedUserId"
 }

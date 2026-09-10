@@ -2,6 +2,7 @@ package com.offcampus.app.ui.payment
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,11 @@ import com.offcampus.app.data.model.PaymentParticipant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaymentSplitScreen(lobbyId: String, onBack: () -> Unit) {
+fun PaymentSplitScreen(
+    lobbyId: String,
+    onBack: () -> Unit,
+    onReport: (reportedUserId: String) -> Unit
+) {
     val viewModel: PaymentSplitViewModel = viewModel(
         factory = viewModelFactory { initializer { PaymentSplitViewModel(lobbyId) } }
     )
@@ -86,7 +91,8 @@ fun PaymentSplitScreen(lobbyId: String, onBack: () -> Unit) {
                         currentUid = viewModel.currentUid,
                         isPayer = viewModel.currentUid == current.paidBy,
                         onMarkSent = { viewModel.markSent(participant.userId) },
-                        onConfirmReceived = { viewModel.confirmReceived(participant.userId) }
+                        onConfirmReceived = { viewModel.confirmReceived(participant.userId) },
+                        onReport = { onReport(participant.userId) }
                     )
                 }
             }
@@ -101,34 +107,48 @@ private fun ParticipantRow(
     currentUid: String?,
     isPayer: Boolean,
     onMarkSent: () -> Unit,
-    onConfirmReceived: () -> Unit
+    onConfirmReceived: () -> Unit,
+    onReport: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                "₹%.2f".format(participant.owedAmount),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "₹%.2f".format(participant.owedAmount),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Crossfades between pending/sent/settled states so a status flip (which can arrive
+            // from the other person's device, not just this one) reads as a small reward, not a snap.
+            Crossfade(
+                targetState = Triple(participant.senderAck, participant.receiverAck, participant.settled),
+                label = "ackStatus"
+            ) { (senderAck, receiverAck, settled) ->
+                when {
+                    settled -> StatusChip("Settled", MaterialTheme.colorScheme.tertiary)
+                    senderAck && isPayer -> Button(onClick = onConfirmReceived) { Text("Confirm received") }
+                    senderAck -> StatusChip("Sent — waiting", MaterialTheme.colorScheme.secondary)
+                    participant.userId == currentUid -> Button(onClick = onMarkSent) { Text("Mark as sent") }
+                    else -> StatusChip("Pending", MaterialTheme.colorScheme.error)
+                }
+            }
         }
 
-        // Crossfades between pending/sent/settled states so a status flip (which can arrive from
-        // the other person's device, not just this one) reads as a small reward, not a snap.
-        Crossfade(
-            targetState = Triple(participant.senderAck, participant.receiverAck, participant.settled),
-            label = "ackStatus"
-        ) { (senderAck, receiverAck, settled) ->
-            when {
-                settled -> StatusChip("Settled", MaterialTheme.colorScheme.tertiary)
-                senderAck && isPayer -> Button(onClick = onConfirmReceived) { Text("Confirm received") }
-                senderAck -> StatusChip("Sent — waiting", MaterialTheme.colorScheme.secondary)
-                participant.userId == currentUid -> Button(onClick = onMarkSent) { Text("Mark as sent") }
-                else -> StatusChip("Pending", MaterialTheme.colorScheme.error)
-            }
+        // Can't report yourself, so this row's own participant is skipped — everyone else in
+        // the split (whichever side of the ack they're on) can be flagged from right here.
+        if (participant.userId != currentUid) {
+            Text(
+                "Report",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(top = 4.dp)
+                    .clickable(onClick = onReport)
+            )
         }
     }
 }
