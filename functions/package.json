@@ -1,0 +1,16 @@
+{
+  "name": "offcampus-functions",
+  "private": true,
+  "description": "Phase 9 Cloud Functions — written for the viva report, NOT deployed. See index.js's header comment for why, and for the Blaze-plan / firebase-tools steps that would deploy this.",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1"
+  }
+}

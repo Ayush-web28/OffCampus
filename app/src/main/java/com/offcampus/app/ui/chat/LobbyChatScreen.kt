@@ -1,7 +1,6 @@
 package com.offcampus.app.ui.chat
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,10 +22,6 @@ fun LobbyChatScreen(lobbyId: String, onBack: () -> Unit) {
     val lobby by lobbyViewModel.lobby.collectAsStateWithLifecycle()
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
     val senderNames by chatViewModel.senderNames.collectAsStateWithLifecycle()
-
-    LaunchedEffect(lobby?.memberIds, lobby?.createdBy) {
-        lobby?.let { chatViewModel.ensureParticipants(it.memberIds + it.createdBy) }
-    }
 
     ChatScreen(
         title = lobby?.let { "${it.gate} → ${it.destination}" } ?: "Lobby chat",

@@ -1,11 +1,199 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Interim rule for Phases 2-8: any signed-in rider can read/write anything.
-    // Phase 9 replaces this with per-collection ownership rules (e.g. a rider can only
-    // edit their own profile, only a lobby's members can write to it, etc.) plus tests.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // True if this update touched exactly one top-level field.
+    function onlyFieldChanged(field) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([field]);
+    }
+
+    // ---------------------------------------------------------------------
+    // riders
+    // ---------------------------------------------------------------------
+    match /riders/{riderId} {
+      // Names/avatars are looked up constantly (chat senders, payment participants, friend
+      // lists, lobby members) by riders who aren't the profile's owner, so read stays open
+      // to any signed-in rider.
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == riderId;
+
+      // A rider can freely edit their own profile. The one deliberate exception:
+      // FriendsViewModel.accept() has no Cloud Function backing it yet, so accepting a friend
+      // request is a two-client-write — the accepter's own client also appends itself to the
+      // OTHER rider's friendIds (see that function's own comment). This carve-out allows
+      // exactly that one shape of write — append your own uid to someone else's friendIds,
+      // nothing else — and nothing broader. functions/index.js's onFriendRequestAccepted
+      // shows how this carve-out goes away once a Cloud Function is actually deployed to do
+      // the two-sided write with admin privileges instead.
+      allow update: if isSignedIn() && (
+        request.auth.uid == riderId || isAddingSelfToFriendIds(riderId)
+      );
+      allow delete: if false;
+    }
+
+    function isAddingSelfToFriendIds(riderId) {
+      return onlyFieldChanged('friendIds')
+        && request.resource.data.friendIds == resource.data.friendIds.concat([request.auth.uid])
+        && request.auth.uid != riderId;
+    }
+
+    // ---------------------------------------------------------------------
+    // lobbies
+    // ---------------------------------------------------------------------
+    match /lobbies/{lobbyId} {
+      // Any signed-in rider can browse — matches LobbyBrowseScreen having no "my lobbies only"
+      // restriction.
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.maxSize >= 2 && request.resource.data.maxSize <= 6;
+
+      // Each helper below matches exactly one mutation LobbyDetailViewModel or
+      // PostFareViewModel actually performs — nothing else is a legal lobby update.
+      allow update: if isSignedIn() && (
+        isJoiningLobby() || isLeavingLobby() || isLockingLobby() || isCompletingLobby()
+      );
+
+      allow delete: if false; // no delete flow exists in the app
+    }
+
+    function isJoiningLobby() {
+      return onlyFieldChanged('memberIds')
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+        && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+        && request.auth.uid in request.resource.data.memberIds
+        && !(request.auth.uid in resource.data.memberIds);
+    }
+
+    function isLeavingLobby() {
+      return onlyFieldChanged('memberIds')
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && request.auth.uid in resource.data.memberIds
+        && !(request.auth.uid in request.resource.data.memberIds);
+    }
+
+    // Only the lobby's own creator can lock it — LobbyDetailViewModel.lock()'s comment says
+    // the UI-only check there was always meant to be backed by a real rule here.
+    function isLockingLobby() {
+      return onlyFieldChanged('status')
+        && resource.data.status == 'OPEN'
+        && request.resource.data.status == 'LOCKED'
+        && request.auth.uid == resource.data.createdBy;
+    }
+
+    // Posting the fare split (PostFareViewModel.submit()) flips a locked trip to COMPLETED —
+    // any current member can do this, not just the creator, since whoever paid the fare is
+    // the one posting the split.
+    function isCompletingLobby() {
+      return onlyFieldChanged('status')
+        && resource.data.status == 'LOCKED'
+        && request.resource.data.status == 'COMPLETED'
+        && request.auth.uid in resource.data.memberIds;
+    }
+
+    // ---------------------------------------------------------------------
+    // friendRequests
+    // ---------------------------------------------------------------------
+    match /friendRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+
+      allow create: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId != request.auth.uid
+        && request.resource.data.status == 'PENDING';
+
+      // Accepting: only the recipient, and only a PENDING -> ACCEPTED flip.
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.toUserId
+        && onlyFieldChanged('status')
+        && resource.data.status == 'PENDING'
+        && request.resource.data.status == 'ACCEPTED';
+
+      // Declining or cancelling a still-pending request: either side may delete it.
+      allow delete: if isSignedIn()
+        && resource.data.status == 'PENDING'
+        && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+    }
+
+    // ---------------------------------------------------------------------
+    // chats (+ messages subcollection)
+    // ---------------------------------------------------------------------
+    // Membership is derived from source-of-truth data instead of a separately-maintained
+    // field: a lobby chat's id IS the lobby's own document id (so its membership is just the
+    // lobby's memberIds/createdBy), and a friend chat's id is the deterministic "uidA_uidB"
+    // sorted pair from ChatViewModel.friendChatId() — self-describing, no lookup needed.
+    // ChatViewModel used to mirror this into a client-writable "participantIds" field on the
+    // parent chat doc for rules to check (see git history / CLAUDE.md); that mirror is gone as
+    // of Phase 9 — it was redundant with data that already exists, and it opened a real race
+    // (a message listener could attach and get a permission error before the mirror write
+    // finished, and Firestore listeners don't auto-retry after a permission error).
+    function isChatParticipant(chatId) {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/lobbies/$(chatId)) && isLobbyMember(chatId))
+        || request.auth.uid in chatId.split('_')
+      );
+    }
+
+    function isLobbyMember(lobbyId) {
+      let lobby = get(/databases/$(database)/documents/lobbies/$(lobbyId)).data;
+      return request.auth.uid in lobby.memberIds || request.auth.uid == lobby.createdBy;
+    }
+
+    match /chats/{chatId} {
+      allow read: if isChatParticipant(chatId);
+      allow write: if false; // nothing needs to write the parent doc anymore — see comment above
+
+      match /messages/{messageId} {
+        allow read: if isChatParticipant(chatId);
+        allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false; // messages are permanent once sent
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // paymentSplits
+    // ---------------------------------------------------------------------
+    match /paymentSplits/{splitId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == resource.data.paidBy || request.auth.uid in resource.data.participantIds);
+
+      allow create: if isSignedIn() && request.resource.data.paidBy == request.auth.uid;
+
+      // The payer or any participant can flip ack flags, but never totalFare, paidBy, or who's
+      // in the split. This does NOT fully enforce "you can only change your own participant
+      // entry" — Firestore rules can't diff individual elements inside an array of maps, only
+      // whole-field changes. That's exactly why PaymentSplitViewModel.acknowledge() wraps every
+      // ack in a Firestore transaction on the client instead of trusting this rule alone: the
+      // rule's job here is keeping the money figures honest, not refereeing who-clicked-what.
+      allow update: if isSignedIn()
+        && (request.auth.uid == resource.data.paidBy || request.auth.uid in resource.data.participantIds)
+        && onlyFieldChanged('participants');
+
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // reports
+    // ---------------------------------------------------------------------
+    match /reports/{reportId} {
+      // No moderation UI exists anywhere in this app, so a report is only ever visible to the
+      // rider who filed it — not to the rider it's about, and not to anyone else.
+      allow read: if isSignedIn() && request.auth.uid == resource.data.reportedBy;
+
+      allow create: if isSignedIn()
+        && request.resource.data.reportedBy == request.auth.uid
+        && request.resource.data.status == 'OPEN';
+
+      allow update, delete: if false; // immutable once filed
     }
   }
 }

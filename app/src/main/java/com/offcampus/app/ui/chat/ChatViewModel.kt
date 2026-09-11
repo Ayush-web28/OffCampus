@@ -7,7 +7,6 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
 import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.model.ChatMessage
 import com.offcampus.app.data.model.Rider
@@ -67,21 +66,6 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
                 } ?: "Rider"
             }
             _senderNames.value = nameCache.toMap()
-        }
-    }
-
-    /** Writes/refreshes the parent chat doc's participant list — not needed for messages to
-     * work (Firestore subcollections don't require the parent to exist), but Phase 9's security
-     * rules will need it to check "is this reader actually part of this chat". */
-    fun ensureParticipants(participantIds: List<String>) {
-        viewModelScope.launch {
-            try {
-                FirebaseRefs.chats.document(chatId)
-                    .set(mapOf("participantIds" to participantIds), SetOptions.merge())
-                    .await()
-            } catch (e: Exception) {
-                // Non-critical — messages still send/receive without this.
-            }
         }
     }
 

@@ -1,7 +1,6 @@
 package com.offcampus.app.ui.chat
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,10 +28,6 @@ fun FriendChatScreen(friendId: String, onBack: () -> Unit) {
         factory = viewModelFactory { initializer { ChatViewModel(chatId) } }
     )
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
-
-    LaunchedEffect(myUid) {
-        if (myUid != null) chatViewModel.ensureParticipants(listOf(myUid, friendId))
-    }
 
     ChatScreen(
         title = friend?.name ?: "Chat",
