@@ -2,6 +2,12 @@ package com.offcampus.app.ui.lobby
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -133,7 +139,20 @@ fun LobbyBrowseScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(lobbies, key = { it.id }) { lobby ->
-                    LobbyCard(lobby = lobby, onClick = { onOpenLobby(lobby.id) })
+                    // Starts false and flips true right after first composition, purely so
+                    // AnimatedVisibility has a false->true edge to animate across — a lobby
+                    // that's freshly posted (by anyone, live via the snapshot listener) or
+                    // newly matching a filter fades and scales in instead of just popping in.
+                    val visibleState = remember { MutableTransitionState(false) }
+                    LaunchedEffect(Unit) { visibleState.targetState = true }
+                    AnimatedVisibility(
+                        visibleState = visibleState,
+                        enter = fadeIn(spring(dampingRatio = 0.8f, stiffness = 380f)) +
+                            scaleIn(spring(dampingRatio = 0.8f, stiffness = 380f), initialScale = 0.92f),
+                        exit = fadeOut() + scaleOut(targetScale = 0.92f)
+                    ) {
+                        LobbyCard(lobby = lobby, onClick = { onOpenLobby(lobby.id) })
+                    }
                 }
             }
         }

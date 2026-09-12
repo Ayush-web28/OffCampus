@@ -1,6 +1,11 @@
 package com.offcampus.app.ui.payment
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +29,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -128,7 +136,7 @@ private fun ParticipantRow(
                 label = "ackStatus"
             ) { (senderAck, receiverAck, settled) ->
                 when {
-                    settled -> StatusChip("Settled", MaterialTheme.colorScheme.tertiary)
+                    settled -> StatusChip("Settled", MaterialTheme.colorScheme.tertiary, showCheckmark = true)
                     senderAck && isPayer -> Button(onClick = onConfirmReceived) { Text("Confirm received") }
                     senderAck -> StatusChip("Sent — waiting", MaterialTheme.colorScheme.secondary)
                     participant.userId == currentUid -> Button(onClick = onMarkSent) { Text("Mark as sent") }
@@ -154,13 +162,26 @@ private fun ParticipantRow(
 }
 
 @Composable
-private fun StatusChip(label: String, color: androidx.compose.ui.graphics.Color) {
-    Text(
-        label,
-        style = MaterialTheme.typography.labelLarge,
-        color = color,
+private fun StatusChip(label: String, color: Color, showCheckmark: Boolean = false) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .background(color.copy(alpha = 0.14f), RoundedCornerShape(999.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
-    )
+    ) {
+        if (showCheckmark) {
+            // False->true right after this chip is first composed — settling always means the
+            // Crossfade above just switched into this branch fresh, so a plain `visible = true`
+            // would skip straight to the end state instead of actually playing the morph-in.
+            val checkmarkVisible = remember { MutableTransitionState(false) }
+            LaunchedEffect(Unit) { checkmarkVisible.targetState = true }
+            AnimatedVisibility(
+                visibleState = checkmarkVisible,
+                enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 380f)) + fadeIn()
+            ) {
+                Text("✓ ", style = MaterialTheme.typography.labelLarge, color = color)
+            }
+        }
+        Text(label, style = MaterialTheme.typography.labelLarge, color = color)
+    }
 }

@@ -1,5 +1,10 @@
 package com.offcampus.app.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.offcampus.app.data.model.ChatMessage
@@ -132,12 +138,26 @@ fun ChatScreen(
             ) {
                 itemsIndexed(messages, key = { _, message -> message.id }) { _, message ->
                     val isMine = message.senderId == currentUid
-                    ChatBubble(
-                        message = message,
-                        isMine = isMine,
-                        senderName = if (!isMine && showSenderNames) senderNames[message.senderId] else null,
+                    val density = LocalDensity.current
+                    // False->true on first composition only, same trick as the lobby list —
+                    // every bubble (yours or theirs, arriving live from the other person's
+                    // device) slides up 12dp and fades in exactly once, the moment it appears.
+                    val visibleState = remember { MutableTransitionState(false) }
+                    LaunchedEffect(Unit) { visibleState.targetState = true }
+                    AnimatedVisibility(
+                        visibleState = visibleState,
+                        enter = fadeIn(spring(dampingRatio = 0.8f, stiffness = 380f)) +
+                            slideInVertically(spring(dampingRatio = 0.8f, stiffness = 380f)) {
+                                with(density) { 12.dp.roundToPx() }
+                            },
                         modifier = Modifier.animateItem()
-                    )
+                    ) {
+                        ChatBubble(
+                            message = message,
+                            isMine = isMine,
+                            senderName = if (!isMine && showSenderNames) senderNames[message.senderId] else null
+                        )
+                    }
                 }
             }
         }

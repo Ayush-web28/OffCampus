@@ -1,5 +1,6 @@
 package com.offcampus.app.ui.lobby
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,14 +84,18 @@ private fun SeatDots(filled: Int, total: Int, modifier: Modifier = Modifier) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         repeat(total) { index ->
             val isFilled = index < filled
+            // A dot's own fill state flips instantly whenever someone joins/leaves elsewhere
+            // in the lobby (the whole list re-renders off the live Firestore listener) — this
+            // animates the color swap itself so a seat filling reads as a small transition
+            // rather than a hard cut.
+            val color by animateColorAsState(
+                targetValue = if (isFilled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                label = "seatDotFill"
+            )
             Column(
                 modifier = Modifier
                     .size(8.dp)
-                    .background(
-                        color = if (isFilled) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                        shape = CircleShape
-                    )
+                    .background(color = color, shape = CircleShape)
             ) {}
         }
     }
