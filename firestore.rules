@@ -49,11 +49,15 @@ service cloud.firestore {
       // restriction.
       allow read: if isSignedIn();
 
+      // An auto seats 3, full stop — a cab has real room to flex up to 6. Mirrors
+      // groupSizeOptions() in PostTripViewModel.kt so a raw API call can't post an auto trip
+      // for 6 just because the client-side chips never would have offered that.
       allow create: if isSignedIn()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.memberIds == [request.auth.uid]
         && request.resource.data.status == 'OPEN'
-        && request.resource.data.maxSize >= 2 && request.resource.data.maxSize <= 6;
+        && request.resource.data.maxSize >= 2
+        && request.resource.data.maxSize <= (request.resource.data.rideType == 'AUTO' ? 3 : 6);
 
       // Each helper below matches exactly one mutation LobbyDetailViewModel or
       // PostFareViewModel actually performs — nothing else is a legal lobby update.

@@ -95,7 +95,7 @@ fun PostTripScreen(
 
             Text("Group size", style = MaterialTheme.typography.titleMedium)
             ChipRow(modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)) {
-                GROUP_SIZE_OPTIONS.forEach { size ->
+                groupSizeOptions(form.rideType).forEach { size ->
                     FilterChip(
                         selected = form.maxSize == size,
                         onClick = { viewModel.onMaxSizeChange(size) },

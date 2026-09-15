@@ -21,14 +21,18 @@ import java.util.Date
 // happening in the next few hours, not scheduling a trip next week, so a quick chip picks
 // the moment better than a calendar widget would.
 val DEPARTURE_OFFSET_MINUTES = listOf(15, 30, 60, 90, 120, 180)
-val GROUP_SIZE_OPTIONS = 2..6
+
+// A real auto-rickshaw is licensed for 3 passengers, full stop — a cab (sedan/SUV) has real
+// room to flex, so only auto gets the tighter cap. Keyed off ride type rather than one fixed
+// range for every trip.
+fun groupSizeOptions(rideType: RideType): IntRange = if (rideType == RideType.AUTO) 2..3 else 2..6
 
 data class PostTripFormState(
     val checkpoint: String = "",
     val gate: String = "",
     val destination: String = "",
     val departureInMinutes: Int = 30,
-    val maxSize: Int = 4,
+    val maxSize: Int = 3,
     val rideType: RideType = RideType.AUTO,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null
@@ -43,7 +47,13 @@ class PostTripViewModel : ViewModel() {
     fun onDestinationChange(value: String) = _formState.update { it.copy(destination = value, errorMessage = null) }
     fun onDepartureChange(minutes: Int) = _formState.update { it.copy(departureInMinutes = minutes) }
     fun onMaxSizeChange(size: Int) = _formState.update { it.copy(maxSize = size) }
-    fun onRideTypeChange(type: RideType) = _formState.update { it.copy(rideType = type) }
+
+    // Switching to Auto while a larger Cab-only group size is selected clamps it back down to
+    // 3 instead of leaving the form in a state the UI's own chips no longer offer.
+    fun onRideTypeChange(type: RideType) = _formState.update {
+        val range = groupSizeOptions(type)
+        it.copy(rideType = type, maxSize = it.maxSize.coerceIn(range.first, range.last))
+    }
 
     fun submit(onPosted: () -> Unit) {
         val form = _formState.value
@@ -51,6 +61,12 @@ class PostTripViewModel : ViewModel() {
 
         if (form.checkpoint.isBlank() || form.gate.isBlank() || form.destination.isBlank()) {
             _formState.update { it.copy(errorMessage = "Fill in checkpoint, gate and destination.") }
+            return
+        }
+        // Belt-and-suspenders: the chips never offer an out-of-range value, but this guards
+        // the actual write in case that ever changes without this check being updated too.
+        if (form.maxSize !in groupSizeOptions(form.rideType)) {
+            _formState.update { it.copy(errorMessage = "An auto can't seat more than 3 — pick a smaller group or switch to Cab.") }
             return
         }
 

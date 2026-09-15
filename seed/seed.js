@@ -36,10 +36,10 @@ const riders = [
 // 5 lobbies spread across 3 checkpoints/gates, mixing OPEN/LOCKED status and AUTO/CAB ride
 // types so Phase 3's filters/sort have something real to filter and sort.
 const lobbies = [
-  { id: "lobby_gate2_hsr", checkpoint: "Main Campus", gate: "Gate 2", destination: "HSR Layout", departureTime: hoursFromNow(1), rideType: "AUTO", maxSize: 4, memberIds: ["rider_aditi", "rider_kabir"], status: "OPEN", createdBy: "rider_aditi", createdAt: Timestamp.now() },
+  { id: "lobby_gate2_hsr", checkpoint: "Main Campus", gate: "Gate 2", destination: "HSR Layout", departureTime: hoursFromNow(1), rideType: "AUTO", maxSize: 3, memberIds: ["rider_aditi", "rider_kabir"], status: "OPEN", createdBy: "rider_aditi", createdAt: Timestamp.now() },
   { id: "lobby_gate2_koramangala", checkpoint: "Main Campus", gate: "Gate 2", destination: "Koramangala", departureTime: hoursFromNow(2), rideType: "CAB", maxSize: 4, memberIds: ["rider_sana"], status: "OPEN", createdBy: "rider_sana", createdAt: Timestamp.now() },
   { id: "lobby_gate5_whitefield", checkpoint: "Main Campus", gate: "Gate 5", destination: "Whitefield", departureTime: hoursFromNow(1.5), rideType: "AUTO", maxSize: 3, memberIds: ["rider_dev", "rider_meera", "rider_yusuf"], status: "LOCKED", createdBy: "rider_dev", createdAt: Timestamp.now() },
-  { id: "lobby_gate5_marathahalli", checkpoint: "Main Campus", gate: "Gate 5", destination: "Marathahalli", departureTime: hoursFromNow(3), rideType: "AUTO", maxSize: 4, memberIds: ["rider_priya"], status: "OPEN", createdBy: "rider_priya", createdAt: Timestamp.now() },
+  { id: "lobby_gate5_marathahalli", checkpoint: "Main Campus", gate: "Gate 5", destination: "Marathahalli", departureTime: hoursFromNow(3), rideType: "AUTO", maxSize: 3, memberIds: ["rider_priya"], status: "OPEN", createdBy: "rider_priya", createdAt: Timestamp.now() },
   { id: "lobby_backgate_silkboard", checkpoint: "North Campus", gate: "Back Gate", destination: "Silk Board", departureTime: hoursFromNow(0.5), rideType: "CAB", maxSize: 4, memberIds: ["rider_arjun", "rider_zara"], status: "OPEN", createdBy: "rider_arjun", createdAt: Timestamp.now() }
 ];
 
