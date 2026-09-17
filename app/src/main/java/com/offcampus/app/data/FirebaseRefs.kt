@@ -18,4 +18,5 @@ object FirebaseRefs {
     val chats: CollectionReference get() = db.collection("chats")
     val paymentSplits: CollectionReference get() = db.collection("paymentSplits")
     val reports: CollectionReference get() = db.collection("reports")
+    val ratings: CollectionReference get() = db.collection("ratings")
 }

@@ -47,7 +47,8 @@ import com.offcampus.app.data.model.PaymentParticipant
 fun PaymentSplitScreen(
     lobbyId: String,
     onBack: () -> Unit,
-    onReport: (reportedUserId: String) -> Unit
+    onReport: (reportedUserId: String) -> Unit,
+    onRate: (ratedUserId: String) -> Unit
 ) {
     val viewModel: PaymentSplitViewModel = viewModel(
         factory = viewModelFactory { initializer { PaymentSplitViewModel(lobbyId) } }
@@ -81,11 +82,25 @@ fun PaymentSplitScreen(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("₹%.2f total".format(current.totalFare), style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    "Paid by ${names[current.paidBy] ?: "…"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Paid by ${names[current.paidBy] ?: "…"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Only a participant (not the payer looking at their own split) gets this —
+                    // matches ParticipantRow's own "can't act on yourself" guard below.
+                    if (viewModel.currentUid != current.paidBy) {
+                        Text(
+                            "Rate",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .clickable { onRate(current.paidBy) }
+                        )
+                    }
+                }
             }
 
             LazyColumn(
@@ -100,7 +115,8 @@ fun PaymentSplitScreen(
                         isPayer = viewModel.currentUid == current.paidBy,
                         onMarkSent = { viewModel.markSent(participant.userId) },
                         onConfirmReceived = { viewModel.confirmReceived(participant.userId) },
-                        onReport = { onReport(participant.userId) }
+                        onReport = { onReport(participant.userId) },
+                        onRate = { onRate(participant.userId) }
                     )
                 }
             }
@@ -116,7 +132,8 @@ private fun ParticipantRow(
     isPayer: Boolean,
     onMarkSent: () -> Unit,
     onConfirmReceived: () -> Unit,
-    onReport: () -> Unit
+    onReport: () -> Unit,
+    onRate: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,18 +162,27 @@ private fun ParticipantRow(
             }
         }
 
-        // Can't report yourself, so this row's own participant is skipped — everyone else in
-        // the split (whichever side of the ack they're on) can be flagged from right here.
+        // Can't act on yourself, so this row's own participant is skipped for both actions —
+        // everyone else in the split (whichever side of the ack they're on) can be rated or
+        // flagged from right here.
         if (participant.userId != currentUid) {
-            Text(
-                "Report",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 4.dp)
-                    .clickable(onClick = onReport)
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+            ) {
+                Text(
+                    "Rate",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onRate)
+                )
+                Text(
+                    "Report",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.clickable(onClick = onReport)
+                )
+            }
         }
     }
 }

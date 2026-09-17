@@ -33,6 +33,7 @@ import com.offcampus.app.ui.payment.PostFareScreen
 import com.offcampus.app.ui.payment.TripHistoryScreen
 import com.offcampus.app.ui.profile.AvatarPickerScreen
 import com.offcampus.app.ui.profile.ProfileScreen
+import com.offcampus.app.ui.rating.RateRiderScreen
 import com.offcampus.app.ui.report.ReportScreen
 
 /**
@@ -182,7 +183,8 @@ fun OffCampusNavHost() {
                     PaymentSplitScreen(
                         lobbyId = lobbyId,
                         onBack = { navController.popBackStack() },
-                        onReport = { reportedUserId -> navController.navigate(Routes.report(lobbyId, reportedUserId)) }
+                        onReport = { reportedUserId -> navController.navigate(Routes.report(lobbyId, reportedUserId)) },
+                        onRate = { ratedUserId -> navController.navigate(Routes.rate(lobbyId, ratedUserId)) }
                     )
                 }
             }
@@ -200,6 +202,24 @@ fun OffCampusNavHost() {
                     ReportScreen(
                         lobbyId = lobbyId,
                         reportedUserId = reportedUserId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            }
+
+            composable(
+                route = Routes.RATE_PATTERN,
+                arguments = listOf(
+                    navArgument("lobbyId") { type = NavType.StringType },
+                    navArgument("ratedUserId") { type = NavType.StringType }
+                )
+            ) { entry ->
+                val lobbyId = entry.arguments?.getString("lobbyId")
+                val ratedUserId = entry.arguments?.getString("ratedUserId")
+                if (lobbyId != null && ratedUserId != null) {
+                    RateRiderScreen(
+                        lobbyId = lobbyId,
+                        ratedUserId = ratedUserId,
                         onBack = { navController.popBackStack() }
                     )
                 }

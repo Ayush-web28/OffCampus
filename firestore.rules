@@ -21,24 +21,41 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == riderId;
 
-      // A rider can freely edit their own profile. The one deliberate exception:
-      // FriendsViewModel.accept() has no Cloud Function backing it yet, so accepting a friend
-      // request is a two-client-write — the accepter's own client also appends itself to the
-      // OTHER rider's friendIds (see that function's own comment). This carve-out allows
-      // exactly that one shape of write — append your own uid to someone else's friendIds,
-      // nothing else — and nothing broader. functions/index.js's onFriendRequestAccepted
-      // shows how this carve-out goes away once a Cloud Function is actually deployed to do
-      // the two-sided write with admin privileges instead.
+      // A rider can freely edit their own profile. Two deliberate exceptions, both narrow
+      // carve-outs rather than opening riders up generally:
       allow update: if isSignedIn() && (
-        request.auth.uid == riderId || isAddingSelfToFriendIds(riderId)
+        request.auth.uid == riderId || isAddingSelfToFriendIds(riderId) || isRatingUpdate(riderId)
       );
       allow delete: if false;
     }
 
+    // FriendsViewModel.accept() has no Cloud Function backing it yet, so accepting a friend
+    // request is a two-client-write — the accepter's own client also appends itself to the
+    // OTHER rider's friendIds (see that function's own comment). This carve-out allows
+    // exactly that one shape of write — append your own uid to someone else's friendIds,
+    // nothing else — and nothing broader. functions/index.js's onFriendRequestAccepted
+    // shows how this carve-out goes away once a Cloud Function is actually deployed to do
+    // the two-sided write with admin privileges instead.
     function isAddingSelfToFriendIds(riderId) {
       return onlyFieldChanged('friendIds')
         && request.resource.data.friendIds == resource.data.friendIds.concat([request.auth.uid])
         && request.auth.uid != riderId;
+    }
+
+    // RateRiderViewModel.submit() updates the RATED rider's rollup fields from the RATER's own
+    // client — same "no Cloud Function yet" shape as the friendIds carve-out above. This can
+    // only sanity-check the *result*, not the arithmetic that produced it: count may only hold
+    // steady (correcting an existing rating) or grow by exactly one (a new rating), and the
+    // average has to land in [0, 5] — but a rule can't verify the average was computed honestly
+    // from the true previous value, only that whatever number arrived is plausible. Real
+    // enforcement of the actual math needs a Cloud Function to own this write server-side,
+    // same conclusion Phase 9 already reached for payment acks.
+    function isRatingUpdate(riderId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingAverage', 'ratingCount'])
+        && request.auth.uid != riderId
+        && request.resource.data.ratingAverage >= 0 && request.resource.data.ratingAverage <= 5
+        && (request.resource.data.ratingCount == resource.data.ratingCount
+            || request.resource.data.ratingCount == resource.data.ratingCount + 1);
     }
 
     // ---------------------------------------------------------------------
@@ -198,6 +215,35 @@ service cloud.firestore {
         && request.resource.data.status == 'OPEN';
 
       allow update, delete: if false; // immutable once filed
+    }
+
+    // ---------------------------------------------------------------------
+    // ratings
+    // ---------------------------------------------------------------------
+    match /ratings/{ratingId} {
+      // Visible to the two people it's about — the rater (so re-rating shows their own past
+      // choice) and the rated rider — not to browsing riders in general. The first branch
+      // matters even though it looks like it grants nothing: RateRiderViewModel.submit() always
+      // starts its transaction with a read of this exact doc to check for a prior rating, and
+      // that read happens before the doc necessarily exists. Without explicitly allowing reads
+      // of a nonexistent doc, resource is null on that first-ever rating and dereferencing
+      // resource.data below denies the whole transaction — there's nothing sensitive to leak by
+      // allowing a "does this exist yet" check to succeed.
+      allow read: if isSignedIn()
+        && (!exists(/databases/$(database)/documents/ratings/$(ratingId))
+            || request.auth.uid == resource.data.raterUserId
+            || request.auth.uid == resource.data.ratedUserId);
+
+      // update (not just create) is allowed here: RateRiderViewModel's deterministic doc id
+      // means rating the same person twice for the same trip overwrites this same document —
+      // it's a correction, not a new vote, so it isn't create-only like reports are.
+      allow create, update: if isSignedIn()
+        && request.resource.data.raterUserId == request.auth.uid
+        && request.resource.data.ratedUserId != request.auth.uid
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && isLobbyMember(request.resource.data.lobbyId);
+
+      allow delete: if false;
     }
   }
 }
