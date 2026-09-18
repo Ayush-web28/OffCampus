@@ -15,10 +15,29 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.OffCampus">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Catches the magic-link sign-in URL Firebase Auth emails out (see
+                AuthViewModel.sendMagicLink()). autoVerify makes Android confirm ownership of
+                offcampus-5f370.web.app against public/.well-known/assetlinks.json before it will
+                open this straight into the app instead of a browser — the same "App Links"
+                mechanism Firebase's own Dynamic Links used to paper over, now done directly since
+                Dynamic Links shut down in 2025.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="offcampus-5f370.web.app"
+                    android:pathPrefix="/finishSignIn" />
             </intent-filter>
         </activity>
     </application>

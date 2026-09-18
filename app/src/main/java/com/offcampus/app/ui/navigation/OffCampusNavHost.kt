@@ -78,6 +78,9 @@ fun OffCampusNavHost() {
                 // "done" action can just pop back, the same way "change avatar" from Profile does.
                 if (state.justSignedUp) navController.navigate(Routes.AVATAR_PICKER)
             }
+            // A magic-link tap that hasn't collected a name yet — stays on AUTH, where
+            // AuthScreen itself renders the "what's your name" step for this state.
+            is AuthUiState.NeedsProfile -> navController.navigate(Routes.AUTH) { popUpTo(0) }
             AuthUiState.SignedOut -> navController.navigate(Routes.AUTH) { popUpTo(0) }
         }
     }

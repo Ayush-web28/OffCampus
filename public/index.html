@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OffCampus — Sign in</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #171226;
+      color: #F7F5FB;
+      font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+      text-align: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .card { max-width: 360px; }
+    h1 { color: #9384FF; margin-bottom: 8px; }
+    p { opacity: 0.8; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <!--
+    This page only renders when Android couldn't hand the sign-in link straight to the
+    OffCampus app itself (App Links verification via .well-known/assetlinks.json failed,
+    the app isn't installed, or the link was opened on desktop). On a device with the app
+    installed and verified, Android intercepts this URL before the browser ever loads it.
+  -->
+  <div class="card">
+    <h1>OffCampus</h1>
+    <p>
+      This link is meant to open the OffCampus app on your phone. If it didn't open
+      automatically, make sure the app is installed, then tap the sign-in link again
+      from your email.
+    </p>
+  </div>
+</body>
+</html>

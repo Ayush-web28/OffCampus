@@ -10,6 +10,10 @@
 .cxx/
 *.hprof
 
+# Local cache firebase-tools writes on every deploy (hosting file hashes, etc.) — not
+# project source, regenerates automatically.
+.firebase/
+
 # Firebase Admin SDK service account key used by seed/seed.js — grants server-level
 # access to the whole project, never commit it.
 serviceAccountKey.json
