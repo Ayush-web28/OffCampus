@@ -58,9 +58,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs: SharedPreferences =
         application.getSharedPreferences(PREFS_NAME, Application.MODE_PRIVATE)
 
-    private val _uiState = MutableStateFlow<AuthUiState>(
-        auth.currentUser?.let { AuthUiState.SignedIn(it.uid) } ?: AuthUiState.SignedOut
-    )
+    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.SignedOut)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     private val _formState = MutableStateFlow(AuthFormState())
@@ -72,17 +70,41 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         // immediately with the cached user, which is what makes login survive an app restart.
         //
         // It also fires again, asynchronously, right after signUp() creates a new user — which
-        // races the explicit `justSignedUp = true` we set below once the Rider doc is written.
-        // Only touch state here when the signed-in identity actually changes, so a same-uid
-        // callback can't clobber a justSignedUp flag we already set for the current session.
+        // races the explicit `justSignedUp = true` we set in submit()/completeProfile() once the
+        // Rider doc is written. Only touch state here when the signed-in identity actually
+        // changes, so a same-uid callback can't clobber a flag we already set for this session.
+        //
+        // Every authenticated user is resolved through resolveSignedInState() rather than assumed
+        // signed-in: password sign-up always creates the Rider doc before this listener would see
+        // the new session, but a magic-link sign-in (see handleEmailLinkIntent) authenticates the
+        // user immediately with no such guarantee. This listener used to skip that check and set
+        // SignedIn unconditionally — since it fires the instant Firebase's own SDK completes
+        // signInWithEmailLink, it was winning a race against handleEmailLinkIntent's own (correct)
+        // Rider-doc check and dropping a first-time magic-link user straight into the app with no
+        // Rider document at all. Found this rating a real email-link sign-in end to end.
         auth.addAuthStateListener { firebaseAuth ->
             val user = firebaseAuth.currentUser
-            val current = _uiState.value
-            _uiState.value = when {
-                user == null -> AuthUiState.SignedOut
-                current is AuthUiState.SignedIn && current.uid == user.uid -> current
-                else -> AuthUiState.SignedIn(user.uid)
+            if (user == null) {
+                _uiState.value = AuthUiState.SignedOut
+                return@addAuthStateListener
             }
+            val current = _uiState.value
+            if (current is AuthUiState.SignedIn && current.uid == user.uid) return@addAuthStateListener
+            viewModelScope.launch { _uiState.value = resolveSignedInState(user.uid, user.email.orEmpty()) }
+        }
+    }
+
+    /** Whether an authenticated Firebase user counts as fully "signed in" from this app's point
+     * of view — only true once a Rider document exists for them. On a Firestore error, state is
+     * left as-is rather than guessed: NeedsProfile would call completeProfile()'s full document
+     * `set()`, which would silently wipe an existing user's avatar/rating/friends if this ever
+     * misfired for a returning user during a network hiccup. */
+    private suspend fun resolveSignedInState(uid: String, email: String): AuthUiState {
+        return try {
+            val riderSnapshot = FirebaseRefs.riders.document(uid).get().await()
+            if (riderSnapshot.exists()) AuthUiState.SignedIn(uid) else AuthUiState.NeedsProfile(uid, email)
+        } catch (e: Exception) {
+            _uiState.value
         }
     }
 
@@ -183,12 +205,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 // Unlike password sign-up, Firebase creates the auth user the moment the link is
                 // tapped — there's no separate step where we'd have collected a name, so a Rider
                 // document might not exist yet even though Firebase Auth now has a session.
-                val riderSnapshot = FirebaseRefs.riders.document(uid).get().await()
-                _uiState.value = if (riderSnapshot.exists()) {
-                    AuthUiState.SignedIn(uid)
-                } else {
-                    AuthUiState.NeedsProfile(uid, email)
-                }
+                _uiState.value = resolveSignedInState(uid, email)
                 _formState.value = AuthFormState()
             } catch (e: Exception) {
                 _formState.update { it.copy(isSubmitting = false, errorMessage = friendlyAuthError(e)) }
