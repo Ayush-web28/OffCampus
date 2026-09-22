@@ -32,6 +32,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.offcampus.app.data.model.LobbyStatus
+import com.offcampus.app.data.model.Rider
+import com.offcampus.app.ui.avatar.AvatarView
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -48,6 +50,7 @@ fun LobbyDetailScreen(
         factory = viewModelFactory { initializer { LobbyDetailViewModel(lobbyId) } }
     )
     val lobby by viewModel.lobby.collectAsStateWithLifecycle()
+    val members by viewModel.members.collectAsStateWithLifecycle()
     val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -98,6 +101,14 @@ fun LobbyDetailScreen(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )
+            // Shown inline, before any "Join" decision — knowing who you'd actually be riding
+            // with matters most right when you're deciding whether to join a lobby you found
+            // browsing, not after you're already in it.
+            if (members.isNotEmpty()) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    members.forEach { member -> MemberRow(member = member, isMaster = member.id == current.createdBy) }
+                }
+            }
 
             // Crossfades rather than snapping, so locking a lobby (a Firestore update that can
             // arrive from any member's tap, not just this device's) feels like a real transition.
@@ -139,6 +150,29 @@ fun LobbyDetailScreen(
                     Text("Open chat")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MemberRow(member: Rider, isMaster: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AvatarView(avatarId = member.avatarId, size = 32.dp)
+        Text(
+            member.name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 10.dp)
+        )
+        if (isMaster) {
+            Text(
+                "Lobby master",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp)
+            )
         }
     }
 }
