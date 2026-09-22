@@ -106,7 +106,7 @@ fun PostFareScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AvatarView(avatarId = member.avatarId, size = 36.dp)
+                    AvatarView(avatarId = member.avatarId, photoBase64 = member.photoBase64, size = 36.dp)
                     Text(
                         member.name,
                         style = MaterialTheme.typography.titleMedium,

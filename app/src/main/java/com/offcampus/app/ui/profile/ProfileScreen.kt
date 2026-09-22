@@ -38,7 +38,12 @@ fun ProfileScreen(
         if (current == null) {
             CircularProgressIndicator(modifier = Modifier.padding(top = 64.dp))
         } else {
-            AvatarView(avatarId = current.avatarId, size = 96.dp, modifier = Modifier.padding(top = 32.dp))
+            AvatarView(
+                avatarId = current.avatarId,
+                photoBase64 = current.photoBase64,
+                size = 96.dp,
+                modifier = Modifier.padding(top = 32.dp)
+            )
             Text(current.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
             Text(
                 current.email,

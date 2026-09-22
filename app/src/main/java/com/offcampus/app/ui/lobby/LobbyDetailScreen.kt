@@ -165,7 +165,7 @@ private fun MemberRow(member: Rider, isMaster: Boolean) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = member.avatarId, size = 32.dp)
+        AvatarView(avatarId = member.avatarId, photoBase64 = member.photoBase64, size = 32.dp)
         Text(
             member.name,
             style = MaterialTheme.typography.bodyMedium,

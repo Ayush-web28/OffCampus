@@ -35,12 +35,21 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun updateAvatar(avatarId: String, onComplete: () -> Unit = {}) {
+    // Picking a catalog avatar and uploading a photo are mutually exclusive — choosing one
+    // always clears the other, rather than the two silently coexisting with AvatarView just
+    // picking a winner (which is confusing: the field you didn't touch looks like it "reset").
+    fun updateAvatar(avatarId: String, onComplete: () -> Unit = {}) =
+        save(mapOf("avatarId" to avatarId, "photoBase64" to ""), onComplete)
+
+    fun updatePhoto(photoBase64: String, onComplete: () -> Unit = {}) =
+        save(mapOf("photoBase64" to photoBase64), onComplete)
+
+    private fun save(fields: Map<String, Any>, onComplete: () -> Unit) {
         val id = uid ?: return
         viewModelScope.launch {
             _isSaving.value = true
             try {
-                FirebaseRefs.riders.document(id).update("avatarId", avatarId).await()
+                FirebaseRefs.riders.document(id).update(fields).await()
             } finally {
                 _isSaving.value = false
             }
