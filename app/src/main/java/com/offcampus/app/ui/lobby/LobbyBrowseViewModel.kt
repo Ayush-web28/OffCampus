@@ -22,6 +22,11 @@ import kotlinx.coroutines.tasks.await
 
 enum class SortOption { SOONEST, MOST_OPEN }
 
+/** Carries the lobby's own id alongside the message so the Snackbar shown for it can act as a
+ * shortcut straight into that lobby, instead of just informing and leaving the user to go find
+ * it themselves in the list. */
+data class FriendLobbyNotification(val message: String, val lobbyId: String)
+
 data class LobbyFilters(
     val destinationQuery: String = "",
     val rideType: RideType? = null, // null means "all ride types"
@@ -42,8 +47,8 @@ class LobbyBrowseViewModel : ViewModel() {
 
     // In-app stand-in for the real push notification Phase 9's Cloud Function will send —
     // this only fires while the screen is open, since there's no server trigger yet.
-    private val _friendLobbyNotification = MutableStateFlow<String?>(null)
-    val friendLobbyNotification: StateFlow<String?> = _friendLobbyNotification.asStateFlow()
+    private val _friendLobbyNotification = MutableStateFlow<FriendLobbyNotification?>(null)
+    val friendLobbyNotification: StateFlow<FriendLobbyNotification?> = _friendLobbyNotification.asStateFlow()
 
     // null until the first snapshot is processed, so we never "notify" about lobbies that
     // already existed when the screen opened — only ones that arrive afterward.
@@ -91,7 +96,8 @@ class LobbyBrowseViewModel : ViewModel() {
             } catch (e: Exception) {
                 null
             } ?: "A friend"
-            _friendLobbyNotification.value = "$name posted a trip to ${lobby.destination}"
+            _friendLobbyNotification.value =
+                FriendLobbyNotification("$name posted a trip to ${lobby.destination}", lobby.id)
         }
     }
 

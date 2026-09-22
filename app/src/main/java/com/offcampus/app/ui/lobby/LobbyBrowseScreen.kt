@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,8 +55,9 @@ fun LobbyBrowseScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(friendLobbyNotification) {
-        friendLobbyNotification?.let {
-            snackbarHostState.showSnackbar(it)
+        friendLobbyNotification?.let { notification ->
+            val result = snackbarHostState.showSnackbar(notification.message, actionLabel = "View")
+            if (result == SnackbarResult.ActionPerformed) onOpenLobby(notification.lobbyId)
             viewModel.dismissFriendLobbyNotification()
         }
     }
