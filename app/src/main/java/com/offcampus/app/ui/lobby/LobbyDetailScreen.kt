@@ -113,13 +113,18 @@ fun LobbyDetailScreen(
             // Crossfades rather than snapping, so locking a lobby (a Firestore update that can
             // arrive from any member's tap, not just this device's) feels like a real transition.
             Crossfade(targetState = current.status, label = "lobbyStatus", modifier = Modifier.padding(top = 24.dp)) { status ->
+                val isMaster = viewModel.currentUid == current.createdBy
                 when {
                     status == LobbyStatus.COMPLETED -> CompletedTripCard(onViewSplit = onOpenPaymentSplit)
-                    status == LobbyStatus.LOCKED -> LockedRideBookingCard(
+                    // Booking the ride and ending it (splitting the fare) are the lobby master's
+                    // calls to make — everyone else just waits for that to happen, same as they
+                    // can't lock the lobby in the first place.
+                    status == LobbyStatus.LOCKED && isMaster -> LockedRideBookingCard(
                         destination = current.destination,
                         onSplitFare = onOpenPostFare
                     )
-                    viewModel.currentUid == current.createdBy -> LobbyMasterControls(
+                    status == LobbyStatus.LOCKED -> LockedRideInProgressCard()
+                    isMaster -> LobbyMasterControls(
                         canLock = current.memberIds.isNotEmpty(),
                         isUpdating = isUpdating,
                         onLock = viewModel::lock
@@ -216,6 +221,22 @@ private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) 
             OutlinedButton(onClick = onSplitFare, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text("Ride's done — split the fare")
             }
+        }
+    }
+}
+
+@Composable
+private fun LockedRideInProgressCard() {
+    val backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
+    Card(colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = backgroundColor)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Lobby locked — ride in progress", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "The lobby master's booking the ride. Once it's done, they'll split the fare here.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

@@ -110,14 +110,16 @@ service cloud.firestore {
         && request.auth.uid == resource.data.createdBy;
     }
 
-    // Posting the fare split (PostFareViewModel.submit()) flips a locked trip to COMPLETED —
-    // any current member can do this, not just the creator, since whoever paid the fare is
-    // the one posting the split.
+    // Posting the fare split (PostFareViewModel.submit()) flips a locked trip to COMPLETED.
+    // Originally any current member could do this ("whoever paid is the one posting the
+    // split") — narrowed to the lobby master only as part of a later fix restricting ride
+    // booking and ending the ride to whoever locked the lobby in the first place, matching
+    // LobbyDetailScreen.kt hiding those controls from everyone else.
     function isCompletingLobby() {
       return onlyFieldChanged('status')
         && resource.data.status == 'LOCKED'
         && request.resource.data.status == 'COMPLETED'
-        && request.auth.uid in resource.data.memberIds;
+        && request.auth.uid == resource.data.createdBy;
     }
 
     // ---------------------------------------------------------------------
