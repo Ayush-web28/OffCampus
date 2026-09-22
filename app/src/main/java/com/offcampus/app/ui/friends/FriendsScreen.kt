@@ -1,5 +1,6 @@
 package com.offcampus.app.ui.friends
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -45,29 +46,16 @@ fun FriendsScreen(
             Text("Friends", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 20.dp))
 
             Text("Add a friend", style = MaterialTheme.typography.titleMedium)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                OutlinedTextField(
-                    value = addFriendState.email,
-                    onValueChange = viewModel::onEmailChange,
-                    label = { Text("College email") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.weight(1f)
-                )
-                Button(
-                    onClick = viewModel::sendRequest,
-                    enabled = !addFriendState.isSubmitting,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    if (addFriendState.isSubmitting) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text("Add")
-                    }
-                }
+            OutlinedTextField(
+                value = addFriendState.query,
+                onValueChange = viewModel::onQueryChange,
+                label = { Text("Search by name or college email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)
+            )
+            if (addFriendState.isSubmitting) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp).padding(vertical = 4.dp), strokeWidth = 2.dp)
             }
             addFriendState.errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
@@ -75,7 +63,16 @@ fun FriendsScreen(
             addFriendState.successMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodyMedium)
             }
+        }
 
+        // Tapping a suggestion sends the request directly — typing a name or email down to an
+        // exact match is no longer needed, the same way Instagram's search lets you tap a
+        // result instead of typing a full handle.
+        items(addFriendState.searchResults, key = { "search_${it.id}" }) { result ->
+            SearchResultRow(rider = result, onClick = { viewModel.sendRequestTo(result) })
+        }
+
+        item {
             if (incoming.isNotEmpty()) {
                 Text(
                     "Requests",
@@ -102,7 +99,7 @@ fun FriendsScreen(
             )
             if (friends.isEmpty()) {
                 Text(
-                    "No friends yet — add one above by their college email.",
+                    "No friends yet — search a name or college email above and tap them to add.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -112,6 +109,29 @@ fun FriendsScreen(
         items(friends, key = { it.id }) { friend ->
             FriendRow(friend = friend, onOpenChat = { onOpenChat(friend.id) })
         }
+    }
+}
+
+@Composable
+private fun SearchResultRow(rider: Rider, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AvatarView(avatarId = rider.avatarId, size = 40.dp)
+        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+            Text(rider.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                rider.email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            "Add",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge
+        )
     }
 }
 

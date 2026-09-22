@@ -11,6 +11,8 @@ import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.model.FriendRequest
 import com.offcampus.app.data.model.FriendRequestStatus
 import com.offcampus.app.data.model.Rider
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,11 +23,18 @@ import kotlinx.coroutines.tasks.await
 data class IncomingRequest(val request: FriendRequest, val fromRider: Rider)
 
 data class AddFriendState(
-    val email: String = "",
+    val query: String = "",
+    val searchResults: List<Rider> = emptyList(),
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null
 )
+
+// Firestore has no "contains" text search — a range on a single field only ever matches a
+// prefix (name/email starting with the typed text), the same trick used elsewhere in this
+// project. '' is a private-use-area character that sorts after virtually anything, so
+// [prefix, prefix + '') catches every string that starts with prefix.
+private fun String.asPrefixRange() = this to this + ''
 
 class FriendsViewModel : ViewModel() {
     private val uid: String? get() = Firebase.auth.currentUser?.uid
@@ -41,6 +50,7 @@ class FriendsViewModel : ViewModel() {
 
     private var riderListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
+    private var searchJob: Job? = null
 
     init {
         val id = uid
@@ -97,47 +107,67 @@ class FriendsViewModel : ViewModel() {
         }
     }
 
-    fun onEmailChange(value: String) = _addFriendState.update {
-        it.copy(email = value, errorMessage = null, successMessage = null)
-    }
+    fun onQueryChange(value: String) {
+        _addFriendState.update { it.copy(query = value, errorMessage = null, successMessage = null) }
 
-    fun sendRequest() {
-        val myId = uid ?: return
-        val email = _addFriendState.value.email.trim()
-        if (email.isBlank()) {
-            _addFriendState.update { it.copy(errorMessage = "Enter a college email.") }
+        searchJob?.cancel()
+        val trimmed = value.trim()
+        if (trimmed.length < 2) {
+            _addFriendState.update { it.copy(searchResults = emptyList()) }
             return
         }
+        // A short debounce so a fast typist doesn't fire a Firestore query per keystroke —
+        // each new character cancels the previous pending search via searchJob.
+        searchJob = viewModelScope.launch {
+            delay(300)
+            search(trimmed)
+        }
+    }
 
+    private suspend fun search(prefix: String) {
+        val myId = uid
+        try {
+            val (start, end) = prefix.asPrefixRange()
+            // Firestore can't OR across two different fields in one query, so this is two
+            // range queries — one against name, one against email — merged and de-duplicated
+            // by document id below.
+            val byName = FirebaseRefs.riders.orderBy("name").startAt(start).endAt(end)
+                .limit(10).get().await()
+            val byEmail = FirebaseRefs.riders.orderBy("email").startAt(start).endAt(end)
+                .limit(10).get().await()
+
+            val myFriendIds = _friends.value.map { it.id }.toSet()
+            val results = (byName.documents + byEmail.documents)
+                .distinctBy { it.id }
+                .mapNotNull { doc -> doc.toObject(Rider::class.java)?.copy(id = doc.id) }
+                // Nothing useful about suggesting yourself or someone you're already friends with.
+                .filter { it.id != myId && it.id !in myFriendIds }
+                .take(10)
+
+            _addFriendState.update { it.copy(searchResults = results) }
+        } catch (e: Exception) {
+            // A failed search just leaves the list as-is — nothing to retry, the user can keep typing.
+        }
+    }
+
+    fun sendRequestTo(target: Rider) {
+        val myId = uid ?: return
         _addFriendState.update { it.copy(isSubmitting = true, errorMessage = null, successMessage = null) }
         viewModelScope.launch {
             try {
-                val targetDoc = FirebaseRefs.riders.whereEqualTo("email", email).limit(1)
-                    .get().await().documents.firstOrNull()
-
-                if (targetDoc == null) {
-                    fail("No rider found with that email.")
-                    return@launch
-                }
-                val targetId = targetDoc.id
-                if (targetId == myId) {
-                    fail("That's you!")
-                    return@launch
-                }
-
                 val myRider = FirebaseRefs.riders.document(myId).get().await().toObject(Rider::class.java)
-                if (myRider?.friendIds?.contains(targetId) == true) {
+                if (myRider?.friendIds?.contains(target.id) == true) {
                     fail("You're already friends.")
                     return@launch
                 }
 
                 val friendRequests = FirebaseRefs.friendRequests
                 val alreadyOutgoing = friendRequests
-                    .whereEqualTo("fromUserId", myId).whereEqualTo("toUserId", targetId)
+                    .whereEqualTo("fromUserId", myId).whereEqualTo("toUserId", target.id)
                     .whereEqualTo("status", FriendRequestStatus.PENDING.name)
                     .get().await()
                 val alreadyIncoming = friendRequests
-                    .whereEqualTo("fromUserId", targetId).whereEqualTo("toUserId", myId)
+                    .whereEqualTo("fromUserId", target.id).whereEqualTo("toUserId", myId)
                     .whereEqualTo("status", FriendRequestStatus.PENDING.name)
                     .get().await()
                 if (!alreadyOutgoing.isEmpty || !alreadyIncoming.isEmpty) {
@@ -146,9 +176,9 @@ class FriendsViewModel : ViewModel() {
                 }
 
                 friendRequests.add(
-                    FriendRequest(fromUserId = myId, toUserId = targetId, status = FriendRequestStatus.PENDING)
+                    FriendRequest(fromUserId = myId, toUserId = target.id, status = FriendRequestStatus.PENDING)
                 ).await()
-                _addFriendState.value = AddFriendState(successMessage = "Friend request sent.")
+                _addFriendState.value = AddFriendState(successMessage = "Friend request sent to ${target.name}.")
             } catch (e: Exception) {
                 fail(e.localizedMessage ?: "Couldn't send that request. Try again.")
             }
