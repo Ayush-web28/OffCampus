@@ -32,8 +32,9 @@ npx wrangler deploy
 ```
 
 Wrangler prints the Worker's URL, something like `https://offcampus-photos.<you>.workers.dev`.
-Put it in `app/build.gradle.kts` as the default for `photoWorkerUrl` (replacing the
-`REPLACE-ME` placeholder), rebuild and reinstall the app.
+The app's default for `photoWorkerUrl` in `app/build.gradle.kts` is currently set to
+`https://offcampus-photos.offcampus.workers.dev`; if you deploy your own copy, replace it (the
+old address), rebuild and reinstall the app.
 
 ## Run locally
 

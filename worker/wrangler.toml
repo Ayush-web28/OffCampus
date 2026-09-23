@@ -12,4 +12,4 @@ FIREBASE_PROJECT_ID = "offcampus-5f370"
 # local simulated store, so this placeholder is fine for local testing.
 [[kv_namespaces]]
 binding = "PHOTOS"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "eb92e3e3d738454cb0e774ece849b846"

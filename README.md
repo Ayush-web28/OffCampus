@@ -88,8 +88,9 @@ seed/              Script that seeds demo riders and lobbies
 
 ### Profile photos
 
-Photos upload through the Worker in `worker/`. Until you deploy it and set its URL (see
-[worker/README.md](worker/README.md)), the app runs normally but "Upload a photo" shows an error.
+Photos upload through the Worker in `worker/`, already deployed at
+`https://offcampus-photos.offcampus.workers.dev` and set as the app's default. To run your own copy
+instead, see [worker/README.md](worker/README.md).
 
 ### Seed demo data
 

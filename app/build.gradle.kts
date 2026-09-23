@@ -13,7 +13,7 @@ plugins {
 val photoWorkerUrl: String = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
-}.getProperty("photoWorkerUrl") ?: "https://offcampus-photos.REPLACE-ME.workers.dev"
+}.getProperty("photoWorkerUrl") ?: "https://offcampus-photos.offcampus.workers.dev"
 
 android {
     namespace = "com.offcampus.app"
