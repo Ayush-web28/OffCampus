@@ -35,7 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offcampus.app.ui.avatar.AvatarCatalog
 import com.offcampus.app.ui.avatar.AvatarView
-import com.offcampus.app.ui.avatar.compressImageToBase64
+import com.offcampus.app.ui.avatar.compressImageToJpeg
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,11 +47,17 @@ fun AvatarPickerScreen(
 ) {
     val rider by viewModel.rider.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
     var selectedId by remember(rider) { mutableStateOf(rider?.avatarId ?: AvatarCatalog.options.first().id) }
     // A freshly picked photo, held locally until "Save and continue" — null means "use
-    // selectedId instead", not "no photo at all" (the rider's existing photoBase64, if any,
-    // is what's previewed until a new one is picked or a catalog avatar is tapped).
-    var pendingPhoto by remember { mutableStateOf<String?>(null) }
+    // selectedId instead", not "no photo at all" (the rider's existing photo, if any, is what's
+    // previewed until a new one is picked or a catalog avatar is tapped).
+    var pendingPhoto by remember { mutableStateOf<ByteArray?>(null) }
+    // AvatarView's inline-photo path doubles as the preview for bytes that aren't uploaded yet.
+    val previewBase64 = remember(pendingPhoto) {
+        pendingPhoto?.let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) }
+    }
+    var presetChosen by remember { mutableStateOf(false) } // tapped a catalog avatar this visit
     var isCompressing by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -64,9 +70,12 @@ fun AvatarPickerScreen(
             // Dispatchers.IO keeps that off the UI thread the same way every Firestore .await()
             // call elsewhere in this app already does implicitly via the Firebase SDK's own
             // background dispatch.
-            val base64 = withContext(Dispatchers.IO) { compressImageToBase64(context, uri) }
+            val jpeg = withContext(Dispatchers.IO) { compressImageToJpeg(context, uri) }
             isCompressing = false
-            if (base64 != null) pendingPhoto = base64
+            if (jpeg != null) {
+                pendingPhoto = jpeg
+                presetChosen = false
+            }
         }
     }
 
@@ -82,7 +91,9 @@ fun AvatarPickerScreen(
         Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
             AvatarView(
                 avatarId = selectedId,
-                photoBase64 = pendingPhoto ?: rider?.photoBase64.orEmpty(),
+                // The rider's saved photo only counts as the preview until they pick something else.
+                photoUrl = if (pendingPhoto == null && !presetChosen) rider?.photoUrl.orEmpty() else "",
+                photoBase64 = previewBase64 ?: if (presetChosen) "" else rider?.photoBase64.orEmpty(),
                 size = 88.dp
             )
         }
@@ -107,7 +118,8 @@ fun AvatarPickerScreen(
                 // A pending photo and a catalog pick are mutually exclusive in the UI too, not
                 // just on save — tapping a preset here always clears whatever photo was picked,
                 // same as picking a photo above always overrides whichever preset was selected.
-                val isSelected = option.id == selectedId && pendingPhoto == null
+                val hasSavedPhoto = rider?.photoUrl?.isNotBlank() == true || rider?.photoBase64?.isNotBlank() == true
+                val isSelected = option.id == selectedId && pendingPhoto == null && (presetChosen || !hasSavedPhoto)
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
@@ -123,6 +135,7 @@ fun AvatarPickerScreen(
                         .clickable {
                             selectedId = option.id
                             pendingPhoto = null
+                            presetChosen = true
                         }
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
@@ -132,10 +145,13 @@ fun AvatarPickerScreen(
             }
         }
 
+        error?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
+        }
         Button(
             onClick = {
                 val photo = pendingPhoto
-                if (photo != null) viewModel.updatePhoto(photo, onComplete = onDone)
+                if (photo != null) viewModel.uploadPhoto(photo, onComplete = onDone)
                 else viewModel.updateAvatar(selectedId, onComplete = onDone)
             },
             enabled = !isSaving && !isCompressing,

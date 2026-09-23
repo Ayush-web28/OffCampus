@@ -118,7 +118,7 @@ private fun SearchResultRow(rider: Rider, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = rider.avatarId, photoBase64 = rider.photoBase64, size = 40.dp)
+        AvatarView(avatarId = rider.avatarId, photoUrl = rider.photoUrl, photoBase64 = rider.photoBase64, size = 40.dp)
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
             Text(rider.name, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -144,6 +144,7 @@ private fun IncomingRequestRow(
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         AvatarView(
             avatarId = incomingRequest.fromRider.avatarId,
+            photoUrl = incomingRequest.fromRider.photoUrl,
             photoBase64 = incomingRequest.fromRider.photoBase64,
             size = 44.dp
         )
@@ -166,7 +167,7 @@ private fun FriendRow(friend: Rider, onOpenChat: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = friend.avatarId, photoBase64 = friend.photoBase64, size = 44.dp)
+        AvatarView(avatarId = friend.avatarId, photoUrl = friend.photoUrl, photoBase64 = friend.photoBase64, size = 44.dp)
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
             Text(friend.name, style = MaterialTheme.typography.titleMedium)
             Text(

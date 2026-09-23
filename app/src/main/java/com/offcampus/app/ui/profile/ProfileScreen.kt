@@ -40,6 +40,7 @@ fun ProfileScreen(
         } else {
             AvatarView(
                 avatarId = current.avatarId,
+                photoUrl = current.photoUrl,
                 photoBase64 = current.photoBase64,
                 size = 96.dp,
                 modifier = Modifier.padding(top = 32.dp)

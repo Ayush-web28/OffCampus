@@ -1,9 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.gms.google-services")
 }
+
+// Where the deployed Cloudflare photo Worker lives (see worker/README.md). Override it for a local
+// `wrangler dev` run by adding `photoWorkerUrl=http://localhost:8787` to local.properties (which is
+// git-ignored) — everyone else just gets the committed default.
+val photoWorkerUrl: String = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}.getProperty("photoWorkerUrl") ?: "https://offcampus-photos.REPLACE-ME.workers.dev"
 
 android {
     namespace = "com.offcampus.app"
@@ -15,6 +25,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "PHOTO_WORKER_URL", "\"$photoWorkerUrl\"")
     }
 
     buildTypes {
@@ -37,6 +48,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -61,6 +73,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+
+    // Loads profile photos from their Worker URL, with memory + disk caching built in.
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Lets us call .await() on Firebase's Task objects instead of nesting listener callbacks.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")

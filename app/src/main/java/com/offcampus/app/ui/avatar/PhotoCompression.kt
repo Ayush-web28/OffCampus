@@ -4,29 +4,27 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64
 import java.io.ByteArrayOutputStream
 
-// Firestore documents cap out at 1MiB and every rider list/friend list/chat header pulls this
-// field along with the name it actually needs, so the photo has to stay small on purpose — a
-// 128x128 JPEG at this quality is typically only a few KB, nowhere near either concern.
-private const val TARGET_SIZE_PX = 128
+// The photo is shrunk before it ever leaves the phone: less to upload, less to store, and it
+// stays well under the Worker's size ceiling. 256px is sharp enough for the largest place an
+// avatar is shown (the 96dp profile picture) and typically lands around 10-40 KB.
+private const val TARGET_SIZE_PX = 256
 private const val JPEG_QUALITY = 80
 
 /**
- * Downscales whatever the user picked to a small square thumbnail and returns it as a
- * base64-encoded JPEG, ready to store directly in Rider.photoBase64. Returns null if the image
- * couldn't be read or decoded — the caller should treat that as "picking failed, try again"
- * rather than silently clearing an existing photo.
+ * Downscales whatever the user picked to a small square JPEG and returns its bytes, ready to send
+ * to the photo Worker. Returns null if the image couldn't be read or decoded — the caller should
+ * treat that as "picking failed, try again" rather than silently clearing an existing photo.
  */
-fun compressImageToBase64(context: Context, uri: Uri): String? {
+fun compressImageToJpeg(context: Context, uri: Uri): ByteArray? {
     val original = decodeBitmap(context, uri) ?: return null
     val square = centerCropToSquare(original)
     val thumbnail = Bitmap.createScaledBitmap(square, TARGET_SIZE_PX, TARGET_SIZE_PX, true)
 
     val output = ByteArrayOutputStream()
     thumbnail.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
-    return Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+    return output.toByteArray()
 }
 
 private fun decodeBitmap(context: Context, uri: Uri): Bitmap? = runCatching {

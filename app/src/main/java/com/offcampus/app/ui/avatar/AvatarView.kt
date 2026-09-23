@@ -18,38 +18,64 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
 
 /**
- * Renders one rider's avatar. If [photoBase64] is a real uploaded photo (see
- * Rider.photoBase64), that's shown instead of the catalog entry — a custom photo always wins
- * over avatarId when both are present, since picking one is meant to replace the other, not
- * layer on top of it.
+ * Renders one rider's avatar. Priority, highest first:
+ *  1. [photoUrl] — the photo served by the Cloudflare Worker (loaded and cached by Coil)
+ *  2. [photoBase64] — a legacy photo stored inline on the rider document, from before the Worker
+ *  3. the preset catalog avatar for [avatarId]
+ * A custom photo always wins over the catalog avatar when present, since picking one is meant to
+ * replace the other, not layer on top of it.
  */
 @Composable
-fun AvatarView(avatarId: String, photoBase64: String = "", size: Dp = 56.dp, modifier: Modifier = Modifier) {
-    if (photoBase64.isNotBlank()) {
-        // Decoding on every recomposition would be wasteful for something as expensive as a
-        // bitmap decode — remember() keyed on the string itself so it only re-runs when the
-        // photo actually changes, not on every unrelated recomposition of this row.
-        val bitmap = remember(photoBase64) {
-            runCatching {
-                val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            }.getOrNull()
-        }
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Profile photo",
-                contentScale = ContentScale.Crop,
-                modifier = modifier.size(size).clip(CircleShape)
-            )
-            return
-        }
-        // Corrupt/undecodable base64 falls through to the catalog avatar below rather than
-        // showing a blank circle.
+fun AvatarView(
+    avatarId: String,
+    photoUrl: String = "",
+    photoBase64: String = "",
+    size: Dp = 56.dp,
+    modifier: Modifier = Modifier
+) {
+    when {
+        photoUrl.isNotBlank() -> SubcomposeAsyncImage(
+            model = photoUrl,
+            contentDescription = "Profile photo",
+            contentScale = ContentScale.Crop,
+            modifier = modifier.size(size).clip(CircleShape),
+            // While it loads, and if it ever can't (offline, deleted), the catalog avatar is
+            // shown instead of an empty circle.
+            loading = { CatalogAvatar(avatarId, size) },
+            error = { CatalogAvatar(avatarId, size) }
+        )
+        photoBase64.isNotBlank() -> LegacyBase64Avatar(avatarId, photoBase64, size, modifier)
+        else -> CatalogAvatar(avatarId, size, modifier)
     }
+}
 
+@Composable
+private fun LegacyBase64Avatar(avatarId: String, photoBase64: String, size: Dp, modifier: Modifier) {
+    // Decoding on every recomposition would be wasteful for something as expensive as a bitmap
+    // decode — remember() keyed on the string so it only re-runs when the photo actually changes.
+    val bitmap = remember(photoBase64) {
+        runCatching {
+            val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }.getOrNull()
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = "Profile photo",
+            contentScale = ContentScale.Crop,
+            modifier = modifier.size(size).clip(CircleShape)
+        )
+    } else {
+        CatalogAvatar(avatarId, size, modifier)
+    }
+}
+
+@Composable
+private fun CatalogAvatar(avatarId: String, size: Dp, modifier: Modifier = Modifier) {
     val option = AvatarCatalog.byId(avatarId)
     Box(
         modifier = modifier

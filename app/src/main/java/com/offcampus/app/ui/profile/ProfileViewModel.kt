@@ -6,6 +6,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.PhotoService
 import com.offcampus.app.data.model.Rider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,25 +36,42 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    // Shown by the picker when an upload or save fails (no network, Worker down, ...) — a photo
+    // upload is a real network call to a separate service, so unlike a plain Firestore write it
+    // has genuine ways to fail that the rider needs to be told about.
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     // Picking a catalog avatar and uploading a photo are mutually exclusive — choosing one
     // always clears the other, rather than the two silently coexisting with AvatarView just
     // picking a winner (which is confusing: the field you didn't touch looks like it "reset").
-    fun updateAvatar(avatarId: String, onComplete: () -> Unit = {}) =
-        save(mapOf("avatarId" to avatarId, "photoBase64" to ""), onComplete)
+    fun updateAvatar(avatarId: String, onComplete: () -> Unit = {}) = saveWith(onComplete) { id ->
+        val hadUploadedPhoto = _rider.value?.photoUrl?.isNotBlank() == true
+        FirebaseRefs.riders.document(id)
+            .update(mapOf("avatarId" to avatarId, "photoUrl" to "", "photoBase64" to "")).await()
+        // Free the stored file too. Best-effort — the profile is already switched over, so a
+        // failed cleanup just leaves an orphaned file behind, not a broken profile.
+        if (hadUploadedPhoto) runCatching { PhotoService.delete() }
+    }
 
-    fun updatePhoto(photoBase64: String, onComplete: () -> Unit = {}) =
-        save(mapOf("photoBase64" to photoBase64), onComplete)
+    fun uploadPhoto(jpeg: ByteArray, onComplete: () -> Unit = {}) = saveWith(onComplete) { id ->
+        val url = PhotoService.upload(jpeg)
+        FirebaseRefs.riders.document(id).update(mapOf("photoUrl" to url, "photoBase64" to "")).await()
+    }
 
-    private fun save(fields: Map<String, Any>, onComplete: () -> Unit) {
+    private fun saveWith(onComplete: () -> Unit, block: suspend (String) -> Unit) {
         val id = uid ?: return
         viewModelScope.launch {
             _isSaving.value = true
+            _error.value = null
             try {
-                FirebaseRefs.riders.document(id).update(fields).await()
+                block(id)
+                onComplete()
+            } catch (e: Exception) {
+                _error.value = e.localizedMessage ?: "Couldn't save that. Try again."
             } finally {
                 _isSaving.value = false
             }
-            onComplete()
         }
     }
 

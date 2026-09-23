@@ -11,7 +11,8 @@ records who owes what and who has confirmed it.
 ## Features
 
 - **Sign in** with a college email and password, or with a passwordless **email link** (magic link).
-- **Profile** with a preset animal avatar or your own uploaded photo, plus a star rating that is
+- **Profile** with a preset animal avatar or your own uploaded photo (stored by a Cloudflare
+  Worker, see `worker/`), plus a star rating that is
   the average of what other riders gave you.
 - **Lobbies**: post a trip, browse, filter (ride type, friends only) and sort, join, leave and
   lock. Auto lobbies cap at 3 riders and Cab lobbies at 6. Everyone in a lobby is shown by name
@@ -33,6 +34,7 @@ records who owes what and who has confirmed it.
 - Kotlin, Jetpack Compose (Material 3), no XML layouts
 - MVVM: `ViewModel` + `StateFlow` feeding composables, no business logic in composables
 - Firebase Authentication, Cloud Firestore (live snapshot listeners), Firebase Hosting
+- Cloudflare Worker + Workers KV for profile photos (`worker/`), image loading with Coil
 - Firestore security rules with per-collection ownership rules (`firestore.rules`)
 - `minSdk 24`, `compileSdk` / `targetSdk` 34
 
@@ -58,6 +60,7 @@ app/src/main/java/com/offcampus/app/
   ui/theme/        Colors, typography, shapes
 firestore.rules    Security rules (deployed to the live project)
 functions/         Cloud Functions, written but not deployed (see limitations)
+worker/            Cloudflare Worker that stores profile photos (deploy steps in worker/README.md)
 public/            Firebase Hosting: email-link landing page and assetlinks.json
 seed/              Script that seeds demo riders and lobbies
 ```
@@ -68,7 +71,7 @@ seed/              Script that seeds demo riders and lobbies
 
 - Android Studio, or the Android SDK plus a **JDK between 17 and 21**. The project uses
   Gradle 8.9, which cannot run on JDK 22 or newer (JDK 25 fails with a bare version-string error).
-- Node.js, only needed for the seed script and Firebase deploys.
+- Node.js, only needed for the seed script, the photo Worker and Firebase deploys.
 
 ### Run the app
 
@@ -82,6 +85,11 @@ seed/              Script that seeds demo riders and lobbies
    ```
 
    To use a specific JDK, set `JAVA_HOME` for that command.
+
+### Profile photos
+
+Photos upload through the Worker in `worker/`. Until you deploy it and set its URL (see
+[worker/README.md](worker/README.md)), the app runs normally but "Upload a photo" shows an error.
 
 ### Seed demo data
 
@@ -134,9 +142,9 @@ These are deliberate scope decisions rather than oversights:
 - **No push notifications outside the app.** Cloud Functions and FCM need the paid Blaze plan.
   `functions/index.js` is written but not deployed, so notifications only appear while the app
   process is alive.
-- **Profile photos are stored as a small base64 JPEG on the rider document**, not in Cloud
-  Storage, which also needs Blaze. They show in most places but not in chat bubbles, the report
-  screen or the rate-rider screen, which still show the preset avatar.
+- **Profile photos live in Cloudflare KV**, not Firebase Storage (which needs Blaze). They show in
+  most places but not in chat bubbles, the report screen or the rate-rider screen, which still
+  show the preset avatar. Photo URLs are public to anyone who knows a rider's uid.
 - **Friend search matches prefixes only** (typing "Ay" finds "Ayush", but "ush" does not).
   Firestore has no substring search.
 - **Rating and payment-ack arithmetic runs on the client.** The rules can check that results are
