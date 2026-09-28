@@ -65,20 +65,22 @@ fun PostTripScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
-            OutlinedTextField(
+            LocationAutocompleteField(
                 value = form.gate,
+                suggestions = form.gateSuggestions,
                 onValueChange = viewModel::onGateChange,
-                label = { Text("Gate") },
-                placeholder = { Text("Gate 2") },
-                singleLine = true,
+                onSuggestionSelected = viewModel::onGateSuggestionSelected,
+                label = "Gate",
+                placeholder = "Gate 2",
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
-            OutlinedTextField(
+            LocationAutocompleteField(
                 value = form.destination,
+                suggestions = form.destinationSuggestions,
                 onValueChange = viewModel::onDestinationChange,
-                label = { Text("Destination") },
-                placeholder = { Text("HSR Layout") },
-                singleLine = true,
+                onSuggestionSelected = viewModel::onDestinationSuggestionSelected,
+                label = "Destination",
+                placeholder = "HSR Layout",
                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             )
 

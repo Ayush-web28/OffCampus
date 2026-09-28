@@ -16,7 +16,8 @@ records who owes what and who has confirmed it.
   the average of what other riders gave you.
 - **Lobbies**: post a trip, browse, filter (ride type, friends only) and sort, join, leave and
   lock. Auto lobbies cap at 3 riders and Cab lobbies at 6. Everyone in a lobby is shown by name
-  and avatar before you join.
+  and avatar before you join. The Gate and Destination fields show live place suggestions as you
+  type (free, no API key — see "Place suggestions" below).
 - **Lobby master controls**: only the rider who created a lobby can lock it, open the
   Uber / Ola / Rapido links, and end the ride by posting the fare split.
 - **Friends**: search by name or email prefix, send, accept or decline requests, a badge for
@@ -95,6 +96,12 @@ Photos upload through the Worker in `worker/`, already deployed at
 `https://offcampus-photos.offcampus.workers.dev` and set as the app's default. To run your own copy
 instead, see [worker/README.md](worker/README.md).
 
+### Place suggestions
+
+The Gate and Destination fields on the post-trip screen search
+[Photon](https://photon.komoot.io), a free public geocoder built on OpenStreetMap data. No API
+key, no setup, no billing — nothing to configure to run the app.
+
 ### Seed demo data
 
 The seeded riders (`rider_aditi`, `rider_kabir`, ...) exist only as Firestore documents. They have
@@ -151,6 +158,9 @@ These are deliberate scope decisions rather than oversights:
   show the preset avatar. Photo URLs are public to anyone who knows a rider's uid.
 - **Friend search matches prefixes only** (typing "Ay" finds "Ayush", but "ush" does not).
   Firestore has no substring search.
+- **Place suggestions depend on Photon's free public server**, not Google Places (which needs
+  billing). It can be slower or occasionally miss a very small or brand-new landmark, since OSM's
+  data is volunteer-mapped — either field still works as a plain text field regardless.
 - **Rating and payment-ack arithmetic runs on the client.** The rules can check that results are
   plausible but not that the maths was honest. A Cloud Function would fix that.
 - Out of scope for the whole project: real payments, live GPS, driver KYC and real ride-hailing

@@ -6,9 +6,13 @@ import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.PlaceSearchService
+import com.offcampus.app.data.PlaceSuggestion
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.RideType
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +35,14 @@ data class PostTripFormState(
     val checkpoint: String = "",
     val gate: String = "",
     val destination: String = "",
+    // Set only when the rider taps a suggestion, cleared the moment they type again — a
+    // half-edited field shouldn't silently keep posting a previous suggestion's coordinates.
+    val gateLat: Double? = null,
+    val gateLng: Double? = null,
+    val destinationLat: Double? = null,
+    val destinationLng: Double? = null,
+    val gateSuggestions: List<PlaceSuggestion> = emptyList(),
+    val destinationSuggestions: List<PlaceSuggestion> = emptyList(),
     val departureInMinutes: Int = 30,
     val maxSize: Int = 3,
     val rideType: RideType = RideType.AUTO,
@@ -42,9 +54,60 @@ class PostTripViewModel : ViewModel() {
     private val _formState = MutableStateFlow(PostTripFormState())
     val formState: StateFlow<PostTripFormState> = _formState.asStateFlow()
 
+    private var gateSearchJob: Job? = null
+    private var destinationSearchJob: Job? = null
+
     fun onCheckpointChange(value: String) = _formState.update { it.copy(checkpoint = value, errorMessage = null) }
-    fun onGateChange(value: String) = _formState.update { it.copy(gate = value, errorMessage = null) }
-    fun onDestinationChange(value: String) = _formState.update { it.copy(destination = value, errorMessage = null) }
+
+    fun onGateChange(value: String) {
+        _formState.update { it.copy(gate = value, gateLat = null, gateLng = null, errorMessage = null) }
+        gateSearchJob?.cancel()
+        if (value.trim().length < 3) {
+            _formState.update { it.copy(gateSuggestions = emptyList()) }
+            return
+        }
+        // Same 300ms debounce as FriendsViewModel's search — one Photon request per pause in
+        // typing, not one per keystroke.
+        gateSearchJob = viewModelScope.launch {
+            delay(300)
+            val results = PlaceSearchService.search(value)
+            _formState.update { it.copy(gateSuggestions = results) }
+        }
+    }
+
+    fun onDestinationChange(value: String) {
+        _formState.update { it.copy(destination = value, destinationLat = null, destinationLng = null, errorMessage = null) }
+        destinationSearchJob?.cancel()
+        if (value.trim().length < 3) {
+            _formState.update { it.copy(destinationSuggestions = emptyList()) }
+            return
+        }
+        destinationSearchJob = viewModelScope.launch {
+            delay(300)
+            val results = PlaceSearchService.search(value)
+            _formState.update { it.copy(destinationSuggestions = results) }
+        }
+    }
+
+    fun onGateSuggestionSelected(suggestion: PlaceSuggestion) {
+        gateSearchJob?.cancel()
+        _formState.update {
+            it.copy(gate = suggestion.name, gateLat = suggestion.lat, gateLng = suggestion.lng, gateSuggestions = emptyList())
+        }
+    }
+
+    fun onDestinationSuggestionSelected(suggestion: PlaceSuggestion) {
+        destinationSearchJob?.cancel()
+        _formState.update {
+            it.copy(
+                destination = suggestion.name,
+                destinationLat = suggestion.lat,
+                destinationLng = suggestion.lng,
+                destinationSuggestions = emptyList()
+            )
+        }
+    }
+
     fun onDepartureChange(minutes: Int) = _formState.update { it.copy(departureInMinutes = minutes) }
     fun onMaxSizeChange(size: Int) = _formState.update { it.copy(maxSize = size) }
 
@@ -77,6 +140,13 @@ class PostTripViewModel : ViewModel() {
                     checkpoint = form.checkpoint,
                     gate = form.gate,
                     destination = form.destination,
+                    // Only set if the rider actually tapped a suggestion rather than typing a
+                    // place Photon doesn't know — null either way is a normal, expected value,
+                    // not a failure, since the field works as plain free text regardless.
+                    gateLat = form.gateLat,
+                    gateLng = form.gateLng,
+                    destinationLat = form.destinationLat,
+                    destinationLng = form.destinationLng,
                     departureTime = Timestamp(Date(System.currentTimeMillis() + form.departureInMinutes * 60_000L)),
                     rideType = form.rideType,
                     maxSize = form.maxSize,
