@@ -83,12 +83,17 @@ fun FriendsScreen(
         }
 
         items(incoming, key = { it.request.id }) { incomingRequest ->
-            IncomingRequestRow(
-                incomingRequest = incomingRequest,
-                onAccept = { viewModel.accept(incomingRequest) },
-                onDecline = { viewModel.decline(incomingRequest) }
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // animateItem() gives this a real slide/fade-out (Compose Foundation's own item
+            // removal animation) once the accepted/declined request actually drops out of the
+            // live `incoming` list, instead of the row just vanishing on the next recompose.
+            Column(modifier = Modifier.animateItem()) {
+                IncomingRequestRow(
+                    incomingRequest = incomingRequest,
+                    onAccept = { viewModel.accept(incomingRequest) },
+                    onDecline = { viewModel.decline(incomingRequest) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
         }
 
         item {

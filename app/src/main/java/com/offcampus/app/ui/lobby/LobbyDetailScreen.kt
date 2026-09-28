@@ -1,6 +1,9 @@
 package com.offcampus.app.ui.lobby
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,7 +27,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +43,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.Rider
 import com.offcampus.app.ui.avatar.AvatarView
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -134,11 +144,10 @@ fun LobbyDetailScreen(
                         enabled = !isUpdating,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Leave lobby") }
-                    current.memberIds.size < current.maxSize -> Button(
-                        onClick = viewModel::join,
-                        enabled = !isUpdating,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Join lobby") }
+                    current.memberIds.size < current.maxSize -> JoinLobbyButton(
+                        isUpdating = isUpdating,
+                        onClick = viewModel::join
+                    )
                     else -> Text(
                         "This lobby is full.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -182,6 +191,46 @@ private fun MemberRow(member: Rider, isMaster: Boolean) {
     }
 }
 
+/** Optimistically morphs "Join lobby" into a checkmark the instant it's tapped, rather than just
+ * disabling while [isUpdating] — the actual "Leave lobby" state (once Firestore's snapshot
+ * confirms the join) replaces this whole composable an instant later via the caller's own
+ * `when` branch, which happens fast enough in practice that this morph is what a rider sees
+ * bridge the gap, not a bare disabled button. [tapped] resets itself if the write fails (isUpdating
+ * drops back to false while this branch is still showing at all, meaning the join didn't land) so
+ * a failed tap doesn't leave a stuck, misleading checkmark. */
+@Composable
+private fun JoinLobbyButton(isUpdating: Boolean, onClick: () -> Unit) {
+    var tapped by remember { mutableStateOf(false) }
+    LaunchedEffect(isUpdating) {
+        if (!isUpdating && tapped) tapped = false
+    }
+    val containerColor by animateColorAsState(
+        targetValue = if (tapped) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
+        label = "joinButtonColor"
+    )
+    Button(
+        onClick = { tapped = true; onClick() },
+        enabled = !isUpdating && !tapped,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            disabledContainerColor = containerColor
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        AnimatedContent(targetState = tapped, label = "joinButtonContent") { joined ->
+            if (joined) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("Joined", modifier = Modifier.padding(start = 6.dp))
+                }
+            } else {
+                Text("Join lobby")
+            }
+        }
+    }
+}
+
 @Composable
 private fun LobbyMasterControls(canLock: Boolean, isUpdating: Boolean, onLock: () -> Unit) {
     Column {
@@ -213,14 +262,44 @@ private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) 
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
             rideBookingLinks(destination).forEach { link ->
-                Button(
-                    onClick = { openRideBookingLink(context, link) },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                ) { Text("Open in ${link.label}") }
+                RideBookingButton(link = link, onOpen = { openRideBookingLink(context, link) })
             }
             OutlinedButton(onClick = onSplitFare, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text("Ride's done — split the fare")
             }
+        }
+    }
+}
+
+/** A brief "Opening Uber…" spinner state instead of the button just sitting there while Android
+ * hands off to the other app — `openRideBookingLink` itself returns almost instantly (it only
+ * *requests* the activity start), the real handoff delay happens at the OS level a beat later, so
+ * without this a tap looked like nothing happened for a moment. The 2s timeout is a safety net,
+ * not the expected case — it only matters if a rider backs out of Uber/the Play Store fast enough
+ * to see this screen resume while [opening] is still true, so it doesn't get stuck reading
+ * "Opening…" forever after a real launch already happened. */
+@Composable
+private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
+    var opening by remember { mutableStateOf(false) }
+    LaunchedEffect(opening) {
+        if (opening) {
+            delay(2000)
+            opening = false
+        }
+    }
+    Button(
+        onClick = { opening = true; onOpen() },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+    ) {
+        if (opening) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+            Text("Opening ${link.label}…", modifier = Modifier.padding(start = 8.dp))
+        } else {
+            Text("Open in ${link.label}")
         }
     }
 }
