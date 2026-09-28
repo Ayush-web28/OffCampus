@@ -156,15 +156,6 @@ These are deliberate scope decisions rather than oversights:
 - Out of scope for the whole project: real payments, live GPS, driver KYC and real ride-hailing
   API booking.
 
-One item below isn't a scope choice, it's a genuine bug found late and not yet fixed:
-
-- **Switching accounts without restarting the app can show stale data.** Sign out, then sign back
-  in as someone else in that same still-running app, and a few screens (unread alerts, the friends
-  list, the profile) can keep showing the *previous* account's data until the app is fully closed
-  and reopened. Several `ViewModel`s read the signed-in uid once, when they're first created, and
-  don't re-check it on a later sign-in. Rare in practice — most phones kill a backgrounded app
-  often enough that this doesn't come up — but real. See CLAUDE.md's Fix 12 entry for the details.
-
 ## Team
 
 Ayush Trivedi, Akshat Vidyarthi and Harsh Thakkar.

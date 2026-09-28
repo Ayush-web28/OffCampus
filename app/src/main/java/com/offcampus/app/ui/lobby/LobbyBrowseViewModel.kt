@@ -3,9 +3,11 @@ package com.offcampus.app.ui.lobby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.RideType
@@ -56,14 +58,13 @@ class LobbyBrowseViewModel : ViewModel() {
 
     private var lobbyListener: ListenerRegistration? = null
     private var riderListener: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     init {
-        val id = uid
-        if (id != null) {
-            riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-                _friendIds.value = snapshot?.toObject(Rider::class.java)?.friendIds?.toSet() ?: emptySet()
-            }
-        }
+        // See observeSignedInUid's doc — a one-shot `val id = uid` here used to keep the
+        // "Friends only" filter working off the previous account's friend list after switching
+        // accounts mid-session.
+        authListener = observeSignedInUid(::attachRiderListener)
 
         // Only OPEN lobbies are joinable, so that's the only thing browse needs to listen to.
         // This is a live listener, not a one-shot get() — a lobby filling up on someone else's
@@ -86,6 +87,15 @@ class LobbyBrowseViewModel : ViewModel() {
 
                 _lobbies.value = lobbies
             }
+    }
+
+    private fun attachRiderListener(id: String?) {
+        riderListener?.remove()
+        _friendIds.value = emptySet()
+        if (id == null) return
+        riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
+            _friendIds.value = snapshot?.toObject(Rider::class.java)?.friendIds?.toSet() ?: emptySet()
+        }
     }
 
     private fun notifyFriendLobby(lobby: Lobby) {
@@ -133,6 +143,7 @@ class LobbyBrowseViewModel : ViewModel() {
     fun onSortChange(sort: SortOption) = _filters.update { it.copy(sort = sort) }
 
     override fun onCleared() {
+        authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         lobbyListener?.remove()
         riderListener?.remove()
     }

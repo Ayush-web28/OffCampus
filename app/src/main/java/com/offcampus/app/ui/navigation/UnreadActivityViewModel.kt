@@ -3,11 +3,13 @@ package com.offcampus.app.ui.navigation
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.model.Rider
+import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.ui.chat.friendChatId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,7 @@ class UnreadActivityViewModel : ViewModel() {
 
     private var riderListener: ListenerRegistration? = null
     private var lobbiesListener: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     // One watcher per relevant chat id, added or torn down as the relevant set changes (a friend
     // removed, a lobby left) so no listener outlives its reason to exist.
@@ -37,20 +40,32 @@ class UnreadActivityViewModel : ViewModel() {
     private var lastLobbyChatIds: List<String> = emptyList()
 
     init {
-        val id = uid
-        if (id != null) {
-            riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-                val friendIds = snapshot?.toObject(Rider::class.java)?.friendIds ?: emptyList()
-                syncWatchedChats(friendChatIds = friendIds.map { friendChatId(id, it) })
-            }
-            // The creator is always added to their own lobby's memberIds on posting (see
-            // PostTripViewModel), so this one query covers both "created" and "joined".
-            lobbiesListener = FirebaseRefs.lobbies
-                .whereArrayContains("memberIds", id)
-                .addSnapshotListener { snapshot, _ ->
-                    syncWatchedChats(lobbyChatIds = snapshot?.documents?.map { it.id } ?: emptyList())
-                }
+        // See observeSignedInUid's doc — a one-shot `val id = uid` here used to keep this dot lit
+        // (or dark) based on the previous account's chats after switching accounts mid-session.
+        authListener = observeSignedInUid(::attachListeners)
+    }
+
+    private fun attachListeners(id: String?) {
+        riderListener?.remove()
+        lobbiesListener?.remove()
+        chatWatchers.values.forEach { it.remove() }
+        chatWatchers.clear()
+        lastFriendChatIds = emptyList()
+        lastLobbyChatIds = emptyList()
+        _unreadChatIds.value = emptySet()
+        if (id == null) return
+
+        riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
+            val friendIds = snapshot?.toObject(Rider::class.java)?.friendIds ?: emptyList()
+            syncWatchedChats(friendChatIds = friendIds.map { friendChatId(id, it) })
         }
+        // The creator is always added to their own lobby's memberIds on posting (see
+        // PostTripViewModel), so this one query covers both "created" and "joined".
+        lobbiesListener = FirebaseRefs.lobbies
+            .whereArrayContains("memberIds", id)
+            .addSnapshotListener { snapshot, _ ->
+                syncWatchedChats(lobbyChatIds = snapshot?.documents?.map { it.id } ?: emptyList())
+            }
     }
 
     // Each listener above only knows its own half of the picture — this remembers the other
@@ -76,6 +91,7 @@ class UnreadActivityViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         riderListener?.remove()
         lobbiesListener?.remove()
         chatWatchers.values.forEach { it.remove() }

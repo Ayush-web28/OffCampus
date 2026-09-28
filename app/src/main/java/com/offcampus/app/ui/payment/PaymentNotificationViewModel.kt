@@ -3,9 +3,11 @@ package com.offcampus.app.ui.payment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.PaymentSplit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,25 +31,33 @@ class PaymentNotificationViewModel : ViewModel() {
     // existed when the listener started — only ones created afterward.
     private var seenSplitIds: MutableSet<String>? = null
     private var listener: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     init {
-        val id = uid
-        if (id != null) {
-            listener = FirebaseRefs.paymentSplits
-                .whereArrayContains("participantIds", id)
-                .addSnapshotListener { snapshot, _ ->
-                    val splits = snapshot?.documents?.mapNotNull { doc ->
-                        doc.toObject(PaymentSplit::class.java)?.copy(id = doc.id)
-                    } ?: emptyList()
+        // See observeSignedInUid's doc — a one-shot `val id = uid` here used to keep watching
+        // the previous account's payment splits after switching accounts mid-session.
+        authListener = observeSignedInUid(::attachListener)
+    }
 
-                    val previouslySeen = seenSplitIds
-                    if (previouslySeen != null) {
-                        val newSplit = splits.firstOrNull { it.id !in previouslySeen }
-                        if (newSplit != null) notifyOwed(newSplit, id)
-                    }
-                    seenSplitIds = splits.map { it.id }.toMutableSet()
+    private fun attachListener(id: String?) {
+        listener?.remove()
+        seenSplitIds = null
+        if (id == null) return
+
+        listener = FirebaseRefs.paymentSplits
+            .whereArrayContains("participantIds", id)
+            .addSnapshotListener { snapshot, _ ->
+                val splits = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(PaymentSplit::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                val previouslySeen = seenSplitIds
+                if (previouslySeen != null) {
+                    val newSplit = splits.firstOrNull { it.id !in previouslySeen }
+                    if (newSplit != null) notifyOwed(newSplit, id)
                 }
-        }
+                seenSplitIds = splits.map { it.id }.toMutableSet()
+            }
     }
 
     private fun notifyOwed(split: PaymentSplit, myId: String) {
@@ -67,6 +77,7 @@ class PaymentNotificationViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         listener?.remove()
     }
 }

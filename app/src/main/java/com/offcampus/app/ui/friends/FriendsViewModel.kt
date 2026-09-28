@@ -3,11 +3,13 @@ package com.offcampus.app.ui.friends
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.data.model.FriendRequest
 import com.offcampus.app.data.model.FriendRequestStatus
 import com.offcampus.app.data.model.Rider
@@ -50,27 +52,38 @@ class FriendsViewModel : ViewModel() {
 
     private var riderListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
     private var searchJob: Job? = null
 
     init {
-        val id = uid
-        if (id != null) {
-            // Friends themselves are read from MY rider doc's friendIds — re-resolved into full
-            // Rider objects whenever that array changes, rather than a live listener per friend.
-            riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-                val friendIds = snapshot?.toObject(Rider::class.java)?.friendIds ?: emptyList()
-                loadFriends(friendIds)
-            }
-            incomingListener = FirebaseRefs.friendRequests
-                .whereEqualTo("toUserId", id)
-                .whereEqualTo("status", FriendRequestStatus.PENDING.name)
-                .addSnapshotListener { snapshot, _ ->
-                    val requests = snapshot?.documents?.mapNotNull { doc ->
-                        doc.toObject(FriendRequest::class.java)?.copy(id = doc.id)
-                    } ?: emptyList()
-                    loadIncoming(requests)
-                }
+        // Reacts to WHO is signed in, not just whether someone is — see observeSignedInUid's own
+        // doc for why a one-shot `val id = uid` here used to leave a stale account's friends and
+        // requests on screen after switching accounts without restarting the app.
+        authListener = observeSignedInUid(::attachListeners)
+    }
+
+    private fun attachListeners(id: String?) {
+        riderListener?.remove()
+        incomingListener?.remove()
+        _friends.value = emptyList()
+        _incomingRequests.value = emptyList()
+        if (id == null) return
+
+        // Friends themselves are read from MY rider doc's friendIds — re-resolved into full
+        // Rider objects whenever that array changes, rather than a live listener per friend.
+        riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
+            val friendIds = snapshot?.toObject(Rider::class.java)?.friendIds ?: emptyList()
+            loadFriends(friendIds)
         }
+        incomingListener = FirebaseRefs.friendRequests
+            .whereEqualTo("toUserId", id)
+            .whereEqualTo("status", FriendRequestStatus.PENDING.name)
+            .addSnapshotListener { snapshot, _ ->
+                val requests = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(FriendRequest::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                loadIncoming(requests)
+            }
     }
 
     private fun loadFriends(friendIds: List<String>) {
@@ -217,6 +230,7 @@ class FriendsViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         riderListener?.remove()
         incomingListener?.remove()
     }

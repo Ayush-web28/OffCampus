@@ -3,11 +3,13 @@ package com.offcampus.app.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.PhotoService
 import com.offcampus.app.data.model.Rider
+import com.offcampus.app.data.observeSignedInUid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,15 +26,22 @@ class ProfileViewModel : ViewModel() {
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
     private var listener: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     init {
-        val id = uid
-        if (id != null) {
-            // A live listener, not a one-shot get() — avatar/rating changes show up immediately,
-            // the same real-time pattern Phase 3's lobby list reuses for live seat counts.
-            listener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-                _rider.value = snapshot?.toObject(Rider::class.java)?.copy(id = snapshot.id)
-            }
+        // See observeSignedInUid's doc — a one-shot `val id = uid` here used to keep showing the
+        // previous account's profile after switching accounts mid-session.
+        authListener = observeSignedInUid(::attachListener)
+    }
+
+    private fun attachListener(id: String?) {
+        listener?.remove()
+        _rider.value = null
+        if (id == null) return
+        // A live listener, not a one-shot get() — avatar/rating changes show up immediately,
+        // the same real-time pattern Phase 3's lobby list reuses for live seat counts.
+        listener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
+            _rider.value = snapshot?.toObject(Rider::class.java)?.copy(id = snapshot.id)
         }
     }
 
@@ -76,6 +85,7 @@ class ProfileViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         listener?.remove()
     }
 }
