@@ -1,7 +1,6 @@
 package com.offcampus.app.ui.lobby
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -35,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -152,18 +152,30 @@ fun LobbyBrowseScreen(
                 EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
             }
 
+            // Tracks which lobby ids have already played their enter animation at least once,
+            // for the whole time this screen stays composed — deliberately NOT reset by scroll.
+            // Without this, every id was "new" again each time LazyColumn recomposed it after
+            // scrolling it back into view (it recycles composables well outside the visible
+            // window, so this isn't the same instance remembering it already played), replaying
+            // the fade+scale spring on ordinary scrolling, not just on a genuinely new lobby —
+            // measured as a real, if modest, source of dropped frames during a fast scroll.
+            val animatedLobbyIds = remember { mutableStateMapOf<String, Boolean>() }
+
             LazyColumn(
-                modifier = Modifier.fillMaxSize().animateContentSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(lobbies, key = { it.id }) { lobby ->
-                    // Starts false and flips true right after first composition, purely so
-                    // AnimatedVisibility has a false->true edge to animate across — a lobby
-                    // that's freshly posted (by anyone, live via the snapshot listener) or
-                    // newly matching a filter fades and scales in instead of just popping in.
-                    val visibleState = remember { MutableTransitionState(false) }
-                    LaunchedEffect(Unit) { visibleState.targetState = true }
+                    val alreadyAnimated = animatedLobbyIds.containsKey(lobby.id)
+                    // Starts already-true (skipping the animation) for a lobby that's played it
+                    // before; starts false->true (the fade+scale-in) only the first time a lobby
+                    // id is ever seen — a lobby that's freshly posted or newly matching a filter.
+                    val visibleState = remember { MutableTransitionState(alreadyAnimated) }
+                    LaunchedEffect(Unit) {
+                        visibleState.targetState = true
+                        animatedLobbyIds[lobby.id] = true
+                    }
                     AnimatedVisibility(
                         visibleState = visibleState,
                         enter = fadeIn(spring(dampingRatio = 0.8f, stiffness = 380f)) +
