@@ -24,6 +24,15 @@ enum class AuthMode { SIGN_IN, SIGN_UP }
 enum class AuthMethod { PASSWORD, MAGIC_LINK }
 
 sealed interface AuthUiState {
+    /** The true starting state — before Firebase Auth's own listener has fired even once, so
+     * there's genuinely no answer yet on whether a session is persisted. Deliberately kept
+     * distinct from [SignedOut] (a real, checked "no"): resolving a persisted session into
+     * [SignedIn] needs an actual Firestore read (see [AuthViewModel.resolveSignedInState]),
+     * which takes a real moment over the network — collapsing this into SignedOut used to make
+     * every cold start with an already-signed-in rider flash the sign-in form for a couple of
+     * seconds before jumping to Lobbies, since AuthScreen had no way to tell "definitely signed
+     * out" apart from "don't know yet." */
+    data object Loading : AuthUiState
     data object SignedOut : AuthUiState
     /** [justSignedUp] is true only right after a fresh signup, so the nav host can route
      * through the avatar picker once before landing on the profile screen. */
@@ -58,7 +67,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs: SharedPreferences =
         application.getSharedPreferences(PREFS_NAME, Application.MODE_PRIVATE)
 
-    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.SignedOut)
+    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     private val _formState = MutableStateFlow(AuthFormState())
@@ -98,13 +107,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
      * of view — only true once a Rider document exists for them. On a Firestore error, state is
      * left as-is rather than guessed: NeedsProfile would call completeProfile()'s full document
      * `set()`, which would silently wipe an existing user's avatar/rating/friends if this ever
-     * misfired for a returning user during a network hiccup. */
+     * misfired for a returning user during a network hiccup. The one exception is Loading — if
+     * this is the very first resolution attempt and it fails, "leave state as-is" would strand
+     * the rider on a spinner forever with no way to retry, so that one case falls back to
+     * SignedOut instead, same as it always did before Loading existed as its own state. */
     private suspend fun resolveSignedInState(uid: String, email: String): AuthUiState {
         return try {
             val riderSnapshot = FirebaseRefs.riders.document(uid).get().await()
             if (riderSnapshot.exists()) AuthUiState.SignedIn(uid) else AuthUiState.NeedsProfile(uid, email)
         } catch (e: Exception) {
-            _uiState.value
+            val current = _uiState.value
+            if (current is AuthUiState.Loading) AuthUiState.SignedOut else current
         }
     }
 

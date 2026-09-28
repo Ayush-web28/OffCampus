@@ -29,6 +29,17 @@ fun AuthScreen(viewModel: AuthViewModel) {
     val form by viewModel.formState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // While the very first auth check is still in flight (see AuthUiState.Loading's own doc),
+    // this renders nothing but a spinner — not the sign-in form — so a rider who already has a
+    // session doesn't see the form flash for the second or two that check genuinely takes over
+    // the network, only to be yanked straight to Lobbies right after.
+    if (uiState is AuthUiState.Loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text("OffCampus", style = MaterialTheme.typography.displayLarge)

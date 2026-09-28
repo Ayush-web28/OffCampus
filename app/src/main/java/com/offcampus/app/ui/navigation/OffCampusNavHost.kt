@@ -77,6 +77,11 @@ fun OffCampusNavHost() {
     // redirects away from it before the user perceives it.
     LaunchedEffect(authState) {
         when (val state = authState) {
+            // Nothing to navigate to yet — Firebase Auth's own listener hasn't answered whether
+            // a session is persisted. Staying put on AUTH's first frame is exactly right here;
+            // AuthScreen renders a blank/loading view for this state rather than the sign-in
+            // form, so there's nothing for the rider to see flash before this resolves.
+            AuthUiState.Loading -> Unit
             is AuthUiState.SignedIn -> {
                 navController.navigate(Routes.LOBBIES) { popUpTo(0) }
                 // Avatar picker is pushed ON TOP of Lobbies (not instead of it) so its own
