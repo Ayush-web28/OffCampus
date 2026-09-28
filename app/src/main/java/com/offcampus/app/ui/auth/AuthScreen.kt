@@ -29,11 +29,17 @@ fun AuthScreen(viewModel: AuthViewModel) {
     val form by viewModel.formState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // While the very first auth check is still in flight (see AuthUiState.Loading's own doc),
-    // this renders nothing but a spinner — not the sign-in form — so a rider who already has a
-    // session doesn't see the form flash for the second or two that check genuinely takes over
-    // the network, only to be yanked straight to Lobbies right after.
-    if (uiState is AuthUiState.Loading) {
+    // Loading (the very first auth check still in flight) and SignedIn both render just a
+    // spinner, never the sign-in form. SignedIn looks like it shouldn't need handling here at
+    // all — OffCampusNavHost's LaunchedEffect(authState) navigates away from AUTH the moment it
+    // sees SignedIn — but that navigation isn't instant: it's a separate effect that runs on a
+    // later recomposition, and Compose Navigation keeps this screen's own composable alive and
+    // still recomposing (with uiState already SignedIn) for its exit transition. Without this
+    // branch, uiState falling through to the `when` below matched neither Loading nor
+    // NeedsProfile, so it rendered PasswordStep/MagicLinkStep with real content — a full,
+    // opaque sign-in form — for that window, caught on video as a form-then-Lobbies flash right
+    // after a successful resolve, the same flash Loading alone was meant to fix.
+    if (uiState is AuthUiState.Loading || uiState is AuthUiState.SignedIn) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
