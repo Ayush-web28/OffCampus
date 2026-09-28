@@ -33,6 +33,34 @@ private const val CAMPUS_LON = 72.8263
  * where Google's commercial data usually would have it.
  */
 object PlaceSearchService {
+    /** Opens and immediately discards a connection to Photon — meant to be fired the moment the
+     * post-trip screen appears, well before the rider reaches the Gate or Destination field.
+     * Testing found the slow part of a search is almost always the *first* request's DNS + TLS
+     * handshake to a fresh host, not Photon's own lookup — this pays that cost in the background
+     * while the rider is still filling in Checkpoint, so the connection is warm (pooled and
+     * reusable) by the time they actually start typing a place name. Best-effort only: if it
+     * fails or never finishes, the real search below still works on its own, just without this
+     * head start. */
+    suspend fun warmUp() = withContext(Dispatchers.IO) {
+        try {
+            val connection = (URL("https://photon.komoot.io/api/?q=a&limit=1").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 5_000
+                readTimeout = 5_000
+                setRequestProperty("User-Agent", "OffCampus-Android/1.0 (college project)")
+            }
+            try {
+                connection.responseCode // forces the connection to actually open
+                connection.inputStream.close()
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            // Nothing to do — this is purely an optimization, not a dependency.
+        }
+        Unit
+    }
+
     /** Empty list on no matches OR on any network/parsing failure — a search-as-you-type field
      * should never block the user from just typing the place name by hand instead. */
     suspend fun search(query: String): List<PlaceSuggestion> = withContext(Dispatchers.IO) {
@@ -42,12 +70,12 @@ object PlaceSearchService {
                 "&lat=$CAMPUS_LAT&lon=$CAMPUS_LON&limit=5"
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                // Generous on purpose: Photon's public instance is a free, shared, best-effort
-                // server (see the class doc's tradeoff note) and occasionally slow to answer a
-                // fresh connection — a short timeout here just turns real, if slow, results into
-                // a silent failure the rider never gets to see.
-                connectTimeout = 8_000
-                readTimeout = 8_000
+                // Tuned by hand against real trials, not guessed: 2-3s failed outright most of
+                // the time even with warmUp() run first, since Photon's public server genuinely
+                // takes that long on a fresh request. 4s paired with warmUp() is the shortest
+                // value that held up across repeated real runs.
+                connectTimeout = 4_000
+                readTimeout = 4_000
                 // Photon's public instance is a free shared resource — identifying the app is
                 // considerate, not required, the same spirit as not hammering it every keystroke.
                 setRequestProperty("User-Agent", "OffCampus-Android/1.0 (college project)")

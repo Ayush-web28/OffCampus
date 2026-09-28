@@ -1,5 +1,6 @@
 package com.offcampus.app.ui.lobby
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -41,6 +43,7 @@ import com.offcampus.app.data.PlaceSuggestion
 fun LocationAutocompleteField(
     value: String,
     suggestions: List<PlaceSuggestion>,
+    isLoading: Boolean,
     onValueChange: (String) -> Unit,
     onSuggestionSelected: (PlaceSuggestion) -> Unit,
     label: String,
@@ -63,12 +66,28 @@ fun LocationAutocompleteField(
             label = { Text(label) },
             placeholder = { Text(placeholder) },
             singleLine = true,
+            trailingIcon = if (isLoading) {
+                {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else null,
             modifier = Modifier.fillMaxWidth()
         )
+        // Styled like the rest of the app's cards (ticket-stub shape, themed surface/border)
+        // instead of Material3's plain default dropdown, which reads as generic/off-brand here.
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { dismissed = true },
-            properties = PopupProperties(focusable = false)
+            properties = PopupProperties(focusable = false),
+            shape = MaterialTheme.shapes.medium,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            shadowElevation = 4.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             suggestions.forEach { suggestion ->
                 DropdownMenuItem(
@@ -89,7 +108,7 @@ fun LocationAutocompleteField(
                             Icons.Default.Place,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     },
                     onClick = {

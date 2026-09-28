@@ -43,6 +43,11 @@ data class PostTripFormState(
     val destinationLng: Double? = null,
     val gateSuggestions: List<PlaceSuggestion> = emptyList(),
     val destinationSuggestions: List<PlaceSuggestion> = emptyList(),
+    // True only while a Photon request for that field is actually in flight (after the 300ms
+    // debounce, not during it) — lets the field show a spinner instead of just sitting there
+    // looking unresponsive for however long the request takes.
+    val gateSearching: Boolean = false,
+    val destinationSearching: Boolean = false,
     val departureInMinutes: Int = 30,
     val maxSize: Int = 3,
     val rideType: RideType = RideType.AUTO,
@@ -57,26 +62,37 @@ class PostTripViewModel : ViewModel() {
     private var gateSearchJob: Job? = null
     private var destinationSearchJob: Job? = null
 
+    init {
+        // Fired the instant this screen opens, while the rider is still on Checkpoint — pays
+        // Photon's cold-connection cost in the background so it's (hopefully) already paid by
+        // the time they reach Gate or Destination. See PlaceSearchService.warmUp()'s own doc.
+        viewModelScope.launch { PlaceSearchService.warmUp() }
+    }
+
     fun onCheckpointChange(value: String) = _formState.update { it.copy(checkpoint = value, errorMessage = null) }
 
     fun onGateChange(value: String) {
-        _formState.update { it.copy(gate = value, gateLat = null, gateLng = null, errorMessage = null) }
+        _formState.update { it.copy(gate = value, gateLat = null, gateLng = null, gateSearching = false, errorMessage = null) }
         gateSearchJob?.cancel()
         if (value.trim().length < 3) {
             _formState.update { it.copy(gateSuggestions = emptyList()) }
             return
         }
         // Same 300ms debounce as FriendsViewModel's search — one Photon request per pause in
-        // typing, not one per keystroke.
+        // typing, not one per keystroke. The spinner only turns on once that pause is over and
+        // the request is actually sent, not while still debouncing each keystroke.
         gateSearchJob = viewModelScope.launch {
             delay(300)
+            _formState.update { it.copy(gateSearching = true) }
             val results = PlaceSearchService.search(value)
-            _formState.update { it.copy(gateSuggestions = results) }
+            _formState.update { it.copy(gateSuggestions = results, gateSearching = false) }
         }
     }
 
     fun onDestinationChange(value: String) {
-        _formState.update { it.copy(destination = value, destinationLat = null, destinationLng = null, errorMessage = null) }
+        _formState.update {
+            it.copy(destination = value, destinationLat = null, destinationLng = null, destinationSearching = false, errorMessage = null)
+        }
         destinationSearchJob?.cancel()
         if (value.trim().length < 3) {
             _formState.update { it.copy(destinationSuggestions = emptyList()) }
@@ -84,8 +100,9 @@ class PostTripViewModel : ViewModel() {
         }
         destinationSearchJob = viewModelScope.launch {
             delay(300)
+            _formState.update { it.copy(destinationSearching = true) }
             val results = PlaceSearchService.search(value)
-            _formState.update { it.copy(destinationSuggestions = results) }
+            _formState.update { it.copy(destinationSuggestions = results, destinationSearching = false) }
         }
     }
 

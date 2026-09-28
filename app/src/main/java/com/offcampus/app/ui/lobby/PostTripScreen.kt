@@ -68,6 +68,7 @@ fun PostTripScreen(
             LocationAutocompleteField(
                 value = form.gate,
                 suggestions = form.gateSuggestions,
+                isLoading = form.gateSearching,
                 onValueChange = viewModel::onGateChange,
                 onSuggestionSelected = viewModel::onGateSuggestionSelected,
                 label = "Gate",
@@ -77,6 +78,7 @@ fun PostTripScreen(
             LocationAutocompleteField(
                 value = form.destination,
                 suggestions = form.destinationSuggestions,
+                isLoading = form.destinationSearching,
                 onValueChange = viewModel::onDestinationChange,
                 onSuggestionSelected = viewModel::onDestinationSuggestionSelected,
                 label = "Destination",
