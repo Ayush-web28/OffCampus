@@ -23,9 +23,12 @@ import androidx.compose.ui.unit.dp
  * Always returns a composable (never null) so the same [AnimatedVisibility] instance stays in
  * the tree across recompositions and can animate its own show/hide — returning null outright
  * when [value] was empty (the original version) meant the icon's appearance/disappearance was an
- * instant structural swap with nothing to animate. The same overshoot spring used elsewhere in
- * the app on appear; a plain scale-down on exit, since a bouncy exit would read as the icon
- * lingering rather than leaving. */
+ * instant structural swap with nothing to animate. A near-full-size fragment briefly looked
+ * broken on the emulator during testing — turned out to be the loading spinner (queryLoading, see
+ * LobbyBrowseScreen/LocationAutocompleteField) caught mid-rotation in the same trailing-icon slot,
+ * not this icon at all; once the query actually finished resolving the × rendered correctly. The
+ * same overshoot spring used elsewhere in the app on appear; a plain scale-down on exit, since a
+ * bouncy exit would read as the icon lingering rather than leaving. */
 fun clearableTrailingIcon(value: String, onClear: () -> Unit): @Composable (() -> Unit) = {
     AnimatedVisibility(
         visible = value.isNotEmpty(),
