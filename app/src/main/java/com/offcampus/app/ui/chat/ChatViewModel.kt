@@ -50,7 +50,20 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
                 } ?: emptyList()
                 _messages.value = loaded
                 resolveSenderNames(loaded)
+                markRead(loaded)
             }
+    }
+
+    // Having this chat's listener open at all means the rider is looking at it right now — on
+    // first open, or on any later message arriving while they stay on the screen. One write
+    // covers both cases, so there's no separate "mark as read" action to remember to call.
+    // Feeds UnreadActivityViewModel's alert dot, which compares this against each chat's newest
+    // message timestamp.
+    private fun markRead(loaded: List<ChatMessage>) {
+        val myUid = uid ?: return
+        if (loaded.isEmpty()) return
+        FirebaseRefs.riders.document(myUid).collection("chatReads").document(chatId)
+            .set(mapOf("lastReadAt" to Timestamp.now()))
     }
 
     private fun resolveSenderNames(loaded: List<ChatMessage>) {

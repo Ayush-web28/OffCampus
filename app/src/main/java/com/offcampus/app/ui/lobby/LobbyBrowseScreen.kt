@@ -46,6 +46,7 @@ import com.offcampus.app.data.model.RideType
 fun LobbyBrowseScreen(
     onCreateLobby: () -> Unit,
     onOpenLobby: (String) -> Unit,
+    unreadChatIds: Set<String> = emptySet(),
     viewModel: LobbyBrowseViewModel = viewModel()
 ) {
     val lobbies by viewModel.visibleLobbies.collectAsStateWithLifecycle()
@@ -153,7 +154,11 @@ fun LobbyBrowseScreen(
                             scaleIn(spring(dampingRatio = 0.8f, stiffness = 380f), initialScale = 0.92f),
                         exit = fadeOut() + scaleOut(targetScale = 0.92f)
                     ) {
-                        LobbyCard(lobby = lobby, onClick = { onOpenLobby(lobby.id) })
+                        LobbyCard(
+                            lobby = lobby,
+                            hasUnreadChat = lobby.id in unreadChatIds,
+                            onClick = { onOpenLobby(lobby.id) }
+                        )
                     }
                 }
             }

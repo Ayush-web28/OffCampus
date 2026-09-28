@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 /** The three top-level tabs a signed-in rider switches between; auth/avatar-picker/post-trip/
  * detail screens are all reached by pushing on top of one of these, not by adding more tabs here. */
 @Composable
-fun OffCampusBottomBar(currentRoute: String?, pendingFriendRequests: Int, onSelect: (String) -> Unit) {
+fun OffCampusBottomBar(currentRoute: String?, hasFriendsAlert: Boolean, onSelect: (String) -> Unit) {
     NavigationBar {
         NavigationBarItem(
             selected = currentRoute == Routes.LOBBIES,
@@ -28,7 +28,10 @@ fun OffCampusBottomBar(currentRoute: String?, pendingFriendRequests: Int, onSele
             onClick = { onSelect(Routes.FRIENDS) },
             icon = {
                 BadgedBox(badge = {
-                    if (pendingFriendRequests > 0) Badge { Text("$pendingFriendRequests") }
+                    // A plain presence dot (Badge with no content), not a count — this covers two
+                    // things that don't share a unit (a pending friend request, an unread message
+                    // in any chat), so a single combined number wouldn't mean anything specific.
+                    if (hasFriendsAlert) Badge()
                 }) {
                     Icon(Icons.Default.Face, contentDescription = null)
                 }

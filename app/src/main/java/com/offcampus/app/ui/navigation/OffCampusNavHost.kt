@@ -50,6 +50,11 @@ fun OffCampusNavHost() {
     // same live incoming-requests list rather than each running their own Firestore listener.
     val friendsViewModel: FriendsViewModel = viewModel()
     val incomingRequests by friendsViewModel.incomingRequests.collectAsStateWithLifecycle()
+    // Also shared: the bottom-nav alert dot and each lobby's own card both need to know which
+    // chats currently have something unread, so one live-tracked set feeds both rather than each
+    // re-deriving it (and re-opening the same Firestore listeners) independently.
+    val unreadActivityViewModel: UnreadActivityViewModel = viewModel()
+    val unreadChatIds by unreadActivityViewModel.unreadChatIds.collectAsStateWithLifecycle()
     val navController = rememberNavController()
 
     // Global, not screen-scoped like the friend-lobby Snackbar: "you owe money" is relevant no
@@ -95,7 +100,7 @@ fun OffCampusNavHost() {
             if (showBottomBar) {
                 OffCampusBottomBar(
                     currentRoute = currentRoute,
-                    pendingFriendRequests = incomingRequests.size,
+                    hasFriendsAlert = incomingRequests.isNotEmpty() || unreadChatIds.isNotEmpty(),
                     onSelect = { route ->
                         navController.navigate(route) {
                             popUpTo(Routes.LOBBIES) { saveState = true }
@@ -121,7 +126,8 @@ fun OffCampusNavHost() {
             composable(Routes.LOBBIES) {
                 LobbyBrowseScreen(
                     onCreateLobby = { navController.navigate(Routes.POST_TRIP) },
-                    onOpenLobby = { lobbyId -> navController.navigate(Routes.lobbyDetail(lobbyId)) }
+                    onOpenLobby = { lobbyId -> navController.navigate(Routes.lobbyDetail(lobbyId)) },
+                    unreadChatIds = unreadChatIds
                 )
             }
 

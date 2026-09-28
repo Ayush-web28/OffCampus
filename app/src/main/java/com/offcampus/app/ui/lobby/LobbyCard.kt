@@ -29,7 +29,7 @@ import java.util.Locale
 private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
 
 @Composable
-fun LobbyCard(lobby: Lobby, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LobbyCard(lobby: Lobby, hasUnreadChat: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
@@ -42,13 +42,25 @@ fun LobbyCard(lobby: Lobby, onClick: () -> Unit, modifier: Modifier = Modifier) 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${lobby.gate} → ${lobby.destination}",
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${lobby.gate} → ${lobby.destination}",
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    // Same plain alert dot as the Friends tab, same meaning: an unread message —
+                    // here, in this specific lobby's own chat.
+                    if (hasUnreadChat) {
+                        Column(
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(8.dp)
+                                .background(color = MaterialTheme.colorScheme.error, shape = CircleShape)
+                        ) {}
+                    }
+                }
                 RideTypeChip(lobby.rideType)
             }
             Row(

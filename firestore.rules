@@ -27,6 +27,14 @@ service cloud.firestore {
         request.auth.uid == riderId || isAddingSelfToFriendIds(riderId) || isRatingUpdate(riderId)
       );
       allow delete: if false;
+
+      // One doc per chat this rider has open at some point — see ChatViewModel.markRead() and
+      // UnreadActivityViewModel. Purely personal bookkeeping (which chats has THIS rider seen,
+      // and when) with no bearing on anyone else's data, so unlike the carve-outs above this
+      // just needs a plain owner-only rule, no shape validation.
+      match /chatReads/{chatId} {
+        allow read, write: if isSignedIn() && request.auth.uid == riderId;
+      }
     }
 
     // FriendsViewModel.accept() has no Cloud Function backing it yet, so accepting a friend
