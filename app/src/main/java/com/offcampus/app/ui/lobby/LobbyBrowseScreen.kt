@@ -98,7 +98,7 @@ fun LobbyBrowseScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                } else null,
+                } else clearableTrailingIcon(filters.destinationQuery) { viewModel.onDestinationQueryChange("") },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             )
 

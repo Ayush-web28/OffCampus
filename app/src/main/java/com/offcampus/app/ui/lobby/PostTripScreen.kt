@@ -63,6 +63,7 @@ fun PostTripScreen(
                 label = { Text("Checkpoint") },
                 placeholder = { Text("Main Campus") },
                 singleLine = true,
+                trailingIcon = clearableTrailingIcon(form.checkpoint) { viewModel.onCheckpointChange("") },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
             LocationAutocompleteField(

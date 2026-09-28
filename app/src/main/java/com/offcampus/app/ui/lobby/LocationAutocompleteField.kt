@@ -66,6 +66,9 @@ fun LocationAutocompleteField(
             label = { Text(label) },
             placeholder = { Text(placeholder) },
             singleLine = true,
+            // Loading takes priority — while a search is in flight there's nothing useful yet
+            // to clear the field back to anyway, and swapping straight to the × the instant a
+            // result lands is expected, not jarring.
             trailingIcon = if (isLoading) {
                 {
                     CircularProgressIndicator(
@@ -74,7 +77,7 @@ fun LocationAutocompleteField(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-            } else null,
+            } else clearableTrailingIcon(value) { onValueChange("") },
             modifier = Modifier.fillMaxWidth()
         )
         // Styled like the rest of the app's cards (ticket-stub shape, themed surface/border)
