@@ -108,8 +108,11 @@ fun LocationAutocompleteField(
         // never actually constrained anything. Replaced with a fixed cap instead, chosen the same
         // way Fix 17's network timeout was: measured directly on a real device with the keyboard
         // up, against Destination (the lower, tighter-space field — Gate sits higher and has more
-        // real room below it), rather than guessed.
-        val maxDropdownHeight = 110.dp
+        // real room below it), rather than guessed. 110dp was the first value confirmed to open
+        // below/above without ever covering the field; raised back to 150dp at request for a
+        // taller, easier-to-read list — still small enough on Destination to open above the field
+        // rather than over it, same as at 110dp, just showing more rows once it does.
+        val maxDropdownHeight = 150.dp
 
         DropdownMenu(
             expanded = showMenu,

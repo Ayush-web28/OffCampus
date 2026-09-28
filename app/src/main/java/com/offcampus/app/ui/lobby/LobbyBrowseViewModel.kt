@@ -31,7 +31,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-enum class SortOption { SOONEST, MOST_OPEN }
+enum class SortOption { NEWEST, SOONEST, MOST_OPEN }
 
 /** Carries the lobby's own id alongside the message so the Snackbar shown for it can act as a
  * shortcut straight into that lobby, instead of just informing and leaving the user to go find
@@ -42,7 +42,9 @@ data class LobbyFilters(
     val destinationQuery: String = "",
     val rideType: RideType? = null, // null means "all ride types"
     val friendsOnly: Boolean = false,
-    val sort: SortOption = SortOption.SOONEST
+    // Newest-first by default — a rider who just posted a trip should see it land at the top of
+    // their own list immediately, not have to know to switch sort options to find it.
+    val sort: SortOption = SortOption.NEWEST
 )
 
 class LobbyBrowseViewModel : ViewModel() {
@@ -150,6 +152,7 @@ class LobbyBrowseViewModel : ViewModel() {
                 }
                 .let { filtered ->
                     when (filters.sort) {
+                        SortOption.NEWEST -> filtered.sortedByDescending { it.createdAt }
                         SortOption.SOONEST -> filtered.sortedBy { it.departureTime }
                         SortOption.MOST_OPEN -> filtered.sortedByDescending { it.maxSize - it.memberIds.size }
                     }
