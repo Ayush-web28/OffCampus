@@ -66,9 +66,16 @@ fun OffCampusBottomBar(currentRoute: String?, hasFriendsAlert: Boolean, onSelect
                 animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
                 label = "navPillOffset"
             )
+            // top = 8.dp, not 12.dp to match the icon's own top padding — the icon (BottomTabItem's
+            // Column starts with 12.dp top padding, then a 24.dp default Material icon) has its own
+            // vertical center at 12 + 24/2 = 24.dp from the bar's top. Matching the pill's top
+            // padding to that same 12.dp left the pill's center at 12 + 32/2 = 28.dp — 4.dp lower
+            // than the icon, since the pill (32.dp tall) is taller than the icon (24.dp) and both
+            // were being top-aligned instead of center-aligned. 8.dp puts the pill's own center at
+            // 8 + 32/2 = 24.dp, matching the icon exactly.
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp)
+                    .padding(top = 8.dp)
                     .offset(x = pillOffsetX)
                     .width(pillWidth)
                     .height(32.dp)
