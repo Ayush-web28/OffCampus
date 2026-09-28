@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -139,14 +140,27 @@ class LobbyBrowseViewModel : ViewModel() {
         _friendLobbyNotification.value = null
     }
 
+    // Ticks once immediately, then every minute — purely to force visibleLobbies to re-evaluate
+    // staleness (see STALE_AFTER_MS below) as real time passes, not just when Firestore data
+    // actually changes. Without this, a lobby crossing the 24-hour mark while a rider is sitting
+    // on the Lobbies screen with no new snapshot arriving would stay visible until *something*
+    // else happened to trigger a recompute.
+    private val nowTicker = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(60_000)
+        }
+    }
+
     // Filtering/sorting is derived state: it recomputes automatically whenever the raw list,
-    // the friend graph, the filter settings, or the resolved query location change, instead of
-    // us re-running it in every setter.
+    // the friend graph, the filter settings, the resolved query location, or the clock ticks
+    // over, instead of us re-running it in every setter.
     val visibleLobbies: StateFlow<List<Lobby>> =
-        combine(_lobbies, _filters, _friendIds, _queryLocation) { lobbies, filters, friendIds, queryLocation ->
+        combine(_lobbies, _filters, _friendIds, _queryLocation, nowTicker) { lobbies, filters, friendIds, queryLocation, now ->
             lobbies
                 .filter { lobby ->
-                    (filters.rideType == null || lobby.rideType == filters.rideType) &&
+                    !isStale(lobby, now) &&
+                        (filters.rideType == null || lobby.rideType == filters.rideType) &&
                         (!filters.friendsOnly || lobby.createdBy in friendIds) &&
                         matchesDestination(lobby, filters.destinationQuery, queryLocation)
                 }
@@ -162,6 +176,16 @@ class LobbyBrowseViewModel : ViewModel() {
     val hasAnyLobbies: StateFlow<Boolean> = _lobbies
         .combine(_filters) { lobbies, _ -> lobbies.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    /** A lobby that's been sitting OPEN for more than [STALE_AFTER_MS] since it was created is
+     * treated as abandoned — its own departure window has long passed and its master never
+     * locked or completed it, so it can't meaningfully still be "the same trip" a rider would
+     * want to join. Purely a client-side hide from this list, not a Firestore write: this app
+     * has no deployed Cloud Function to own a real cleanup job (see Fix 9/11's billing notes),
+     * so there's no server-side scheduled deletion — the lobby document itself is untouched,
+     * this just keeps it out of what a rider browses. */
+    private fun isStale(lobby: Lobby, nowMs: Long): Boolean =
+        nowMs - lobby.createdAt.toDate().time > STALE_AFTER_MS
 
     /** A lobby matches "Search destination" either the old way — its own destination text
      * contains what was typed — or, new here, by being within [NEARBY_RADIUS_KM] of wherever
@@ -211,6 +235,10 @@ class LobbyBrowseViewModel : ViewModel() {
         riderListener?.remove()
     }
 }
+
+// How long an OPEN lobby stays browsable after being created, regardless of its own departure
+// time — a lobby nobody locked within a day of posting it is realistically dead, not just late.
+private const val STALE_AFTER_MS = 24 * 60 * 60 * 1000L
 
 // "Same area" for this app's purposes — Mumbai suburbs are dense enough that a lobby's
 // destination within this range of a searched place is a genuinely useful match ("close enough
