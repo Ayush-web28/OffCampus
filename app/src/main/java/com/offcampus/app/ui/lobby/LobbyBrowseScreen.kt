@@ -7,8 +7,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.layout.size
@@ -43,7 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offcampus.app.data.model.RideType
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LobbyBrowseScreen(
     onCreateLobby: () -> Unit,
@@ -102,11 +106,21 @@ fun LobbyBrowseScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             )
 
-            Row(
+            // FlowRow, not a plain Row — without this, "Friends only" (the widest label of the
+            // four) had nowhere to go on a narrower phone once "All rides"/"Auto"/"Cab" already
+            // used up most of the row's width: Compose doesn't wrap or shrink Row children by
+            // default, so the chip's own text wrapped one or two characters per line instead,
+            // ballooning the chip's height to fit them. A first attempt fixed this by making the
+            // row horizontally scrollable, but a swipeable filter row reads oddly next to the
+            // rest of the screen's plain vertical layout — FlowRow instead just drops "Friends
+            // only" onto its own second line whenever it doesn't fit on the first, so every chip
+            // keeps its natural single-line width without needing a hidden gesture to reach it.
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
                     selected = filters.rideType == null,
@@ -133,6 +147,7 @@ fun LobbyBrowseScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
