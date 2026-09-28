@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.offcampus.app.data.PlaceSuggestion
@@ -82,6 +86,12 @@ fun LocationAutocompleteField(
         )
         // Styled like the rest of the app's cards (ticket-stub shape, themed surface/border)
         // instead of Material3's plain default dropdown, which reads as generic/off-brand here.
+        // Capped to ~3.5 rows tall (heightIn(max)) with the rest reachable by scroll — left
+        // uncapped, a long suggestion list (common for a short, common query like "Andheri")
+        // stretched down over almost the whole screen, which read as broken rather than just
+        // "a list." Row layout itself is closer to Uber's pickup/drop-off suggestions (bold
+        // place name, muted address line, a thin divider between rows, no big icon background)
+        // than Material3's own denser default DropdownMenuItem look.
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { dismissed = true },
@@ -90,18 +100,24 @@ fun LocationAutocompleteField(
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
             shadowElevation = 4.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.heightIn(max = 260.dp)
         ) {
-            suggestions.forEach { suggestion ->
+            suggestions.forEachIndexed { index, suggestion ->
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text(suggestion.name, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                suggestion.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             if (suggestion.subtitle.isNotBlank()) {
                                 Text(
                                     suggestion.subtitle,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -110,7 +126,7 @@ fun LocationAutocompleteField(
                         Icon(
                             Icons.Default.Place,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     },
@@ -118,8 +134,11 @@ fun LocationAutocompleteField(
                         dismissed = true
                         onSuggestionSelected(suggestion)
                     },
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                 )
+                if (index != suggestions.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                }
             }
         }
     }
