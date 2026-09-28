@@ -17,7 +17,9 @@ records who owes what and who has confirmed it.
 - **Lobbies**: post a trip, browse, filter (ride type, friends only) and sort, join, leave and
   lock. Auto lobbies cap at 3 riders and Cab lobbies at 6. Everyone in a lobby is shown by name
   and avatar before you join. The Gate and Destination fields show live place suggestions as you
-  type (free, no API key — see "Place suggestions" below).
+  type (free, no API key — see "Place suggestions" below). The Lobbies screen's search bar also
+  matches by area, not just exact text — searching a place surfaces lobbies headed somewhere
+  close by too, not only ones whose destination text happens to contain what you typed.
 - **Lobby master controls**: only the rider who created a lobby can lock it, open the
   Uber / Ola / Rapido links, and end the ride by posting the fare split.
 - **Friends**: search by name or email prefix, send, accept or decline requests, a badge for

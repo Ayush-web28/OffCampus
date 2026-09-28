@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -52,6 +54,7 @@ fun LobbyBrowseScreen(
     val lobbies by viewModel.visibleLobbies.collectAsStateWithLifecycle()
     val hasAnyLobbies by viewModel.hasAnyLobbies.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
     val friendLobbyNotification by viewModel.friendLobbyNotification.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -83,6 +86,19 @@ fun LobbyBrowseScreen(
                 onValueChange = viewModel::onDestinationQueryChange,
                 label = { Text("Search destination") },
                 singleLine = true,
+                // Same spinner-in-the-field pattern as Post Trip's Gate/Destination — this
+                // field resolves what's typed to a real place in the background (see
+                // LobbyBrowseViewModel.matchesDestination), so results can include nearby
+                // lobbies, not just ones whose own text happens to match.
+                trailingIcon = if (queryLoading) {
+                    {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else null,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             )
 
