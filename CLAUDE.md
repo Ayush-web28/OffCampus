@@ -186,6 +186,18 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Pinned `PendingPaymentBanner` at the top of the browse screen and wired navigation in `OffCampusNavHost.kt`.
   - Verified on Pixel 7 emulator: tested "Past rides" shortcut opening `TripHistoryScreen` from the Lobbies header, inspected screen navigation, and verified build and live reactivity.
 
+- **Fix 35 — Universal vertical scroll support across screens and unified browse list** (bug fix: screens could not be scrolled when tested on physical Android devices, causing action buttons and form fields to be cut off or inaccessible when the keyboard was open or on varying screen sizes).
+  - In `LobbyBrowseScreen.kt`, unified the header, search bar, dropdown filter row, and lobby feed into a single `LazyColumn` as items, allowing vertical scrolling gestures from anywhere on the screen.
+  - In `PostTripScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the main Column layout so destination inputs, time selector, gate picker, notes, and "Post Ride" button are always fully scrollable.
+  - In `LobbyDetailScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the content Column containing ride route, riders list, fare/QR card, and lobby actions.
+  - In `ProfileScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the profile detail and stats Column.
+  - In `PostFareScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the fare split and UPI entry Column.
+  - In `RateRiderScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the rating cards and submit button Column.
+  - In `ReportScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the report reasons and submission Column.
+  - In `AuthScreen.kt`, added `Modifier.verticalScroll(rememberScrollState())` to the authentication form Column.
+  - In `LobbyCard.kt`, updated `ActiveRideCard` bottom details layout to use flexible spacing (`Modifier.weight(1f, fill = false)`) so departure time and rider count badges never collide on narrow phone screens.
+  - Verified on physical Android device (`10BDBN1PR3000XL`) and Pixel 7 emulator.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

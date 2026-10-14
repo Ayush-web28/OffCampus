@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -68,7 +70,13 @@ fun PostFareScreen(
             return@Scaffold
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+        ) {
             Text(
                 "Trip to ${form.destination}",
                 style = MaterialTheme.typography.titleLarge,

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -87,7 +89,13 @@ fun ReportScreen(
             return@Scaffold
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 24.dp)) {
                 AvatarView(avatarId = form.reportedUserAvatarId, size = 48.dp)
                 Column(modifier = Modifier.padding(start = 12.dp)) {

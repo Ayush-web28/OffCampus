@@ -95,6 +95,13 @@ fun LobbyBrowseScreen(
         }
     }
 
+    var rideTypeMenuExpanded by remember { mutableStateOf(false) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    // Tracks which lobby ids have already played their enter animation at least once,
+    // for the whole time this screen stays composed — deliberately NOT reset by scroll.
+    val animatedLobbyIds = remember { mutableStateMapOf<String, Boolean>() }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -103,194 +110,186 @@ fun LobbyBrowseScreen(
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Lobbies",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                OutlinedButton(
-                    onClick = onOpenTripHistory
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentPadding = PaddingValues(bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item(key = "header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Past rides")
+                    Text(
+                        "Lobbies",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    OutlinedButton(
+                        onClick = onOpenTripHistory
+                    ) {
+                        Text("Past rides")
+                    }
                 }
             }
 
-            OutlinedTextField(
-                value = filters.destinationQuery,
-                onValueChange = viewModel::onDestinationQueryChange,
-                label = { Text("Search destination") },
-                singleLine = true,
-                // Same spinner-in-the-field pattern as Post Trip's Gate/Destination — this
-                // field resolves what's typed to a real place in the background (see
-                // LobbyBrowseViewModel.matchesDestination), so results can include nearby
-                // lobbies, not just ones whose own text happens to match.
-                trailingIcon = if (queryLoading) {
-                    {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                } else clearableTrailingIcon(filters.destinationQuery) { viewModel.onDestinationQueryChange("") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            )
-
-            var rideTypeMenuExpanded by remember { mutableStateOf(false) }
-            var sortMenuExpanded by remember { mutableStateOf(false) }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Dropdown 1: Ride Type
-                Box {
-                    FilterChip(
-                        selected = filters.rideType != null,
-                        onClick = { rideTypeMenuExpanded = true },
-                        label = {
-                            Text(
-                                when (filters.rideType) {
-                                    null -> "Ride: All"
-                                    RideType.AUTO -> "Ride: Auto"
-                                    RideType.CAB -> "Ride: Cab"
-                                }
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Select ride type",
-                                modifier = Modifier.size(18.dp)
+            item(key = "search") {
+                OutlinedTextField(
+                    value = filters.destinationQuery,
+                    onValueChange = viewModel::onDestinationQueryChange,
+                    label = { Text("Search destination") },
+                    singleLine = true,
+                    trailingIcon = if (queryLoading) {
+                        {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
-                    )
-                    DropdownMenu(
-                        expanded = rideTypeMenuExpanded,
-                        onDismissRequest = { rideTypeMenuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("All rides") },
-                            onClick = {
-                                viewModel.onRideTypeChange(null)
-                                rideTypeMenuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Auto") },
-                            onClick = {
-                                viewModel.onRideTypeChange(RideType.AUTO)
-                                rideTypeMenuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Cab") },
-                            onClick = {
-                                viewModel.onRideTypeChange(RideType.CAB)
-                                rideTypeMenuExpanded = false
-                            }
-                        )
-                    }
-                }
-
-                // Dropdown 2: Sort
-                Box {
-                    FilterChip(
-                        selected = filters.sort != SortOption.NEWEST,
-                        onClick = { sortMenuExpanded = true },
-                        label = {
-                            Text(
-                                when (filters.sort) {
-                                    SortOption.NEWEST -> "Sort: Newest"
-                                    SortOption.SOONEST -> "Sort: Soonest"
-                                    SortOption.MOST_OPEN -> "Sort: Most open"
-                                }
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Select sort order",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                    DropdownMenu(
-                        expanded = sortMenuExpanded,
-                        onDismissRequest = { sortMenuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Newest") },
-                            onClick = {
-                                viewModel.onSortChange(SortOption.NEWEST)
-                                sortMenuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Soonest") },
-                            onClick = {
-                                viewModel.onSortChange(SortOption.SOONEST)
-                                sortMenuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Most open") },
-                            onClick = {
-                                viewModel.onSortChange(SortOption.MOST_OPEN)
-                                sortMenuExpanded = false
-                            }
-                        )
-                    }
-                }
-
-                // Toggle chip: Friends only
-                FilterChip(
-                    selected = filters.friendsOnly,
-                    onClick = { viewModel.onFriendsOnlyChange(!filters.friendsOnly) },
-                    label = { Text("Friends only") }
+                    } else clearableTrailingIcon(filters.destinationQuery) { viewModel.onDestinationQueryChange("") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
                 )
             }
 
-            AnimatedVisibility(visible = lobbies.isEmpty() && activeLobby == null && pendingPayment == null) {
-                EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
+            item(key = "filters") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Dropdown 1: Ride Type
+                    Box {
+                        FilterChip(
+                            selected = filters.rideType != null,
+                            onClick = { rideTypeMenuExpanded = true },
+                            label = {
+                                Text(
+                                    when (filters.rideType) {
+                                        null -> "Ride: All"
+                                        RideType.AUTO -> "Ride: Auto"
+                                        RideType.CAB -> "Ride: Cab"
+                                    }
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = "Select ride type",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = rideTypeMenuExpanded,
+                            onDismissRequest = { rideTypeMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("All rides") },
+                                onClick = {
+                                    viewModel.onRideTypeChange(null)
+                                    rideTypeMenuExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Auto") },
+                                onClick = {
+                                    viewModel.onRideTypeChange(RideType.AUTO)
+                                    rideTypeMenuExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Cab") },
+                                onClick = {
+                                    viewModel.onRideTypeChange(RideType.CAB)
+                                    rideTypeMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+
+                    // Dropdown 2: Sort
+                    Box {
+                        FilterChip(
+                            selected = filters.sort != SortOption.NEWEST,
+                            onClick = { sortMenuExpanded = true },
+                            label = {
+                                Text(
+                                    when (filters.sort) {
+                                        SortOption.NEWEST -> "Sort: Newest"
+                                        SortOption.SOONEST -> "Sort: Soonest"
+                                        SortOption.MOST_OPEN -> "Sort: Most open"
+                                    }
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = "Select sort order",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Newest") },
+                                onClick = {
+                                    viewModel.onSortChange(SortOption.NEWEST)
+                                    sortMenuExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Soonest") },
+                                onClick = {
+                                    viewModel.onSortChange(SortOption.SOONEST)
+                                    sortMenuExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Most open") },
+                                onClick = {
+                                    viewModel.onSortChange(SortOption.MOST_OPEN)
+                                    sortMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+
+                    // Toggle chip: Friends only
+                    FilterChip(
+                        selected = filters.friendsOnly,
+                        onClick = { viewModel.onFriendsOnlyChange(!filters.friendsOnly) },
+                        label = { Text("Friends only") }
+                    )
+                }
             }
 
-            // Tracks which lobby ids have already played their enter animation at least once,
-            // for the whole time this screen stays composed — deliberately NOT reset by scroll.
-            // Without this, every id was "new" again each time LazyColumn recomposed it after
-            // scrolling it back into view (it recycles composables well outside the visible
-            // window, so this isn't the same instance remembering it already played), replaying
-            // the fade+scale spring on ordinary scrolling, not just on a genuinely new lobby —
-            // measured as a real, if modest, source of dropped frames during a fast scroll.
-            val animatedLobbyIds = remember { mutableStateMapOf<String, Boolean>() }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                pendingPayment?.let { info ->
-                    item(key = "pending_payment_${info.lobbyId}") {
+            pendingPayment?.let { info ->
+                item(key = "pending_payment_${info.lobbyId}") {
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                         PendingPaymentBanner(
                             info = info,
                             onClick = { onOpenPaymentSplit(info.lobbyId) }
                         )
                     }
                 }
+            }
 
-                activeLobby?.let { active ->
-                    item(key = "active_ride_${active.id}") {
+            activeLobby?.let { active ->
+                item(key = "active_ride_${active.id}") {
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                         ActiveRideCard(
                             lobby = active,
                             isMaster = active.createdBy == currentUserId,
@@ -299,29 +298,33 @@ fun LobbyBrowseScreen(
                         )
                     }
                 }
+            }
 
-                items(lobbies, key = { it.id }) { lobby ->
-                    val alreadyAnimated = animatedLobbyIds.containsKey(lobby.id)
-                    // Starts already-true (skipping the animation) for a lobby that's played it
-                    // before; starts false->true (the fade+scale-in) only the first time a lobby
-                    // id is ever seen — a lobby that's freshly posted or newly matching a filter.
-                    val visibleState = remember { MutableTransitionState(alreadyAnimated) }
-                    LaunchedEffect(Unit) {
-                        visibleState.targetState = true
-                        animatedLobbyIds[lobby.id] = true
-                    }
-                    AnimatedVisibility(
-                        visibleState = visibleState,
-                        enter = fadeIn(spring(dampingRatio = 0.8f, stiffness = 380f)) +
-                            scaleIn(spring(dampingRatio = 0.8f, stiffness = 380f), initialScale = 0.92f),
-                        exit = fadeOut() + scaleOut(targetScale = 0.92f)
-                    ) {
-                        LobbyCard(
-                            lobby = lobby,
-                            hasUnreadChat = lobby.id in unreadChatIds,
-                            onClick = { onOpenLobby(lobby.id) }
-                        )
-                    }
+            if (lobbies.isEmpty() && activeLobby == null && pendingPayment == null) {
+                item(key = "empty_state") {
+                    EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
+                }
+            }
+
+            items(lobbies, key = { it.id }) { lobby ->
+                val alreadyAnimated = animatedLobbyIds.containsKey(lobby.id)
+                val visibleState = remember { MutableTransitionState(alreadyAnimated) }
+                LaunchedEffect(Unit) {
+                    visibleState.targetState = true
+                    animatedLobbyIds[lobby.id] = true
+                }
+                AnimatedVisibility(
+                    visibleState = visibleState,
+                    enter = fadeIn(spring(dampingRatio = 0.8f, stiffness = 380f)) +
+                        scaleIn(spring(dampingRatio = 0.8f, stiffness = 380f), initialScale = 0.92f),
+                    exit = fadeOut() + scaleOut(targetScale = 0.92f),
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                ) {
+                    LobbyCard(
+                        lobby = lobby,
+                        hasUnreadChat = lobby.id in unreadChatIds,
+                        onClick = { onOpenLobby(lobby.id) }
+                    )
                 }
             }
         }
