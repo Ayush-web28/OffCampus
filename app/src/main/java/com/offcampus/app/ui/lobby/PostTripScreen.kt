@@ -81,8 +81,8 @@ fun PostTripScreen(
                 isLoading = form.gateSearching,
                 onValueChange = viewModel::onGateChange,
                 onSuggestionSelected = viewModel::onGateSuggestionSelected,
-                label = "Gate",
-                placeholder = "Gate 2",
+                label = "Location",
+                placeholder = "Gate 2 or pickup point",
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
             LocationAutocompleteField(

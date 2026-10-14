@@ -154,7 +154,7 @@ class PostTripViewModel : ViewModel() {
         val uid = Firebase.auth.currentUser?.uid ?: return
 
         if (form.checkpoint.isBlank() || form.gate.isBlank() || form.destination.isBlank()) {
-            _formState.update { it.copy(errorMessage = "Fill in checkpoint, gate and destination.") }
+            _formState.update { it.copy(errorMessage = "Fill in checkpoint, location and destination.") }
             return
         }
         // Belt-and-suspenders: the chips never offer an out-of-range value, but this guards

@@ -151,6 +151,12 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - In `PostTripScreen.kt`, replaced the "Leaving in" `ChipRow` with an interactive `OutlinedCard` displaying the formatted time ("Today, 8:00 PM" / "Tomorrow, 7:30 AM") and a "Change" button that opens Android's native `TimePickerDialog` (12-hour format with clock dial and keyboard input options).
   - Verified on Pixel 7 emulator: opened lobby creation, confirmed initial departure time, tapped time picker card, selected custom time (9:32 PM), confirmed the displayed time updated live in the card, and successfully posted the lobby and verified it appeared with the selected time on the browse screen.
 
+- **Fix 29 — Changed lobby creation field label from "Gate" to "Location"** (feature request: generalize pickup point naming during lobby creation beyond just "Gate").
+  - In `PostTripScreen.kt`, updated `LocationAutocompleteField` `label` from `"Gate"` to `"Location"` and updated `placeholder` to `"Gate 2 or pickup point"`.
+  - In `PostTripViewModel.kt`, updated validation error string from `"Fill in checkpoint, gate and destination."` to `"Fill in checkpoint, location and destination."`.
+  - Kept underlying `Lobby.gate` property and Firestore document fields unchanged to preserve full compatibility with the existing database and security rules.
+  - Verified on Pixel 7 emulator: opened lobby creation screen, verified the field label is "Location" with placeholder "Gate 2 or pickup point", verified empty-field validation triggers "Fill in checkpoint, location and destination.", and verified Photon autocomplete suggestions continue to function properly.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
