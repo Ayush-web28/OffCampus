@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -295,38 +296,30 @@ fun PostTripScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 sizeOptions.forEach { size ->
                     val isSelected = form.maxSize == size
                     Card(
                         onClick = { viewModel.onMaxSizeChange(size) },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                         ),
                         border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                     ) {
-                        Row(
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = if (size == 2) Icons.Default.Person else Icons.Default.Group,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "$size riders",
-                                style = MaterialTheme.typography.labelMedium,
+                                text = "$size",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -469,7 +462,7 @@ fun PostTripScreen(
                                     color = if (isCabSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "4 seats max",
+                                    text = "6 seats max",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (isCabSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -484,6 +477,22 @@ fun PostTripScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Dynamic estimated fare calculation based on ride type and group capacity
+            val (minPerStudent, maxPerStudent, savePercent) = when (form.rideType) {
+                RideType.AUTO -> {
+                    val minEst = 100 / form.maxSize
+                    val maxEst = 135 / form.maxSize
+                    val save = ((1.0 - 1.0 / form.maxSize) * 100).toInt()
+                    Triple(minEst, maxEst, save)
+                }
+                RideType.CAB -> {
+                    val minEst = 180 / form.maxSize
+                    val maxEst = 240 / form.maxSize
+                    val save = ((1.0 - 1.0 / form.maxSize) * 100).toInt()
+                    Triple(minEst, maxEst, save)
                 }
             }
 
@@ -507,14 +516,14 @@ fun PostTripScreen(
                         tint = MaterialTheme.colorScheme.tertiary
                     )
                     Text(
-                        text = "Est. split: ₹35–₹45 / student",
+                        text = "Est. split: ₹$minPerStudent–₹$maxPerStudent / student",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
-                    text = "SAVE 60%",
+                    text = "SAVE $savePercent%",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary
