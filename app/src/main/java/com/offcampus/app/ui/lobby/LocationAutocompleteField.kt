@@ -65,7 +65,7 @@ fun LocationAutocompleteField(
     // Dismissed manually (suggestion tapped, or the user taps elsewhere) rather than tied to
     // focus — losing focus by tapping a suggestion row would otherwise close the menu before
     // the click on it even registers.
-    var dismissed by remember { mutableStateOf(false) }
+    var dismissed by remember(suggestions) { mutableStateOf(false) }
     val showMenu = suggestions.isNotEmpty() && !dismissed
 
     Box(modifier = modifier) {

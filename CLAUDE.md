@@ -198,6 +198,20 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - In `LobbyCard.kt`, updated `ActiveRideCard` bottom details layout to use flexible spacing (`Modifier.weight(1f, fill = false)`) so departure time and rider count badges never collide on narrow phone screens.
   - Verified on physical Android device (`10BDBN1PR3000XL`) and Pixel 7 emulator.
 
+- **Fix 36 — Resilient location and destination suggestions with campus presets and timeout expansion** (bug fix: location and destination suggestions during lobby creation were no longer appearing when entering location or destination).
+  - Identified root causes:
+    1. A restrictive 4-second timeout in `PlaceSearchService.kt` caused online geocoding requests to OpenStreetMap's Photon API to time out (`SocketTimeoutException`), returning empty results on mobile or slower networks.
+    2. In `LocationAutocompleteField.kt`, `var dismissed by remember { mutableStateOf(false) }` lacked a dependency key on `suggestions`, causing it to stay permanently dismissed after an initial touch or keyboard inset change.
+    3. Minimum query length of 3 characters in `PostTripViewModel.kt` prevented common campus abbreviations ("G1", "G2", "BK", "T1", "T2") from displaying options.
+    4. Specific campus gates and student landmarks (Gate 1, Gate 2, MPSTME, Mithibai, Hostels, Devniwas) are not indexed in OpenStreetMap / Photon.
+  - Fixes applied:
+    - In `PlaceSearchService.kt`, created curated `CAMPUS_PRESETS` with real campus gates, hostels, and transit hubs (BKC, Airport T1/T2, Stations).
+    - Added `searchLocalPresets(query)` providing instant (0ms latency) suggestion matching for campus landmarks and common abbreviations.
+    - Raised the network connect and read timeout from 4s to 10s for resilient online Photon geocoding.
+    - In `PostTripViewModel.kt`, updated `onGateChange` and `onDestinationChange` to immediately surface matching local presets without waiting for network debounce, while dispatching debounced background Photon searches for remote citywide places.
+    - In `LocationAutocompleteField.kt`, changed `dismissed` state to `remember(suggestions) { mutableStateOf(false) }` so newly arrived suggestions automatically reset dismissal and show the dropdown.
+    - Verified on Pixel 7 emulator: tested typing "Gate" and selecting "Gate 1 (Main Gate)", typing "BKC" and selecting "Bandra Kurla Complex (BKC)", confirming text fields and coordinate states populate accurately and dropdowns dismiss cleanly.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

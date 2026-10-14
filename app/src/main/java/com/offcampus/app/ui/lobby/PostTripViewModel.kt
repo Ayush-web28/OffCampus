@@ -74,17 +74,20 @@ class PostTripViewModel : ViewModel() {
     fun onGateChange(value: String) {
         _formState.update { it.copy(gate = value, gateLat = null, gateLng = null, gateSearching = false, errorMessage = null) }
         gateSearchJob?.cancel()
-        if (value.trim().length < 3) {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
             _formState.update { it.copy(gateSuggestions = emptyList()) }
             return
         }
-        // Same 300ms debounce as FriendsViewModel's search — one Photon request per pause in
-        // typing, not one per keystroke. The spinner only turns on once that pause is over and
-        // the request is actually sent, not while still debouncing each keystroke.
+        // Immediately display matching campus/local presets without waiting for network
+        val immediateLocal = PlaceSearchService.searchLocalPresets(trimmed)
+        if (immediateLocal.isNotEmpty()) {
+            _formState.update { it.copy(gateSuggestions = immediateLocal) }
+        }
         gateSearchJob = viewModelScope.launch {
             delay(300)
             _formState.update { it.copy(gateSearching = true) }
-            val results = PlaceSearchService.search(value)
+            val results = PlaceSearchService.search(trimmed)
             _formState.update { it.copy(gateSuggestions = results, gateSearching = false) }
         }
     }
@@ -94,14 +97,20 @@ class PostTripViewModel : ViewModel() {
             it.copy(destination = value, destinationLat = null, destinationLng = null, destinationSearching = false, errorMessage = null)
         }
         destinationSearchJob?.cancel()
-        if (value.trim().length < 3) {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
             _formState.update { it.copy(destinationSuggestions = emptyList()) }
             return
+        }
+        // Immediately display matching campus/transit presets without waiting for network
+        val immediateLocal = PlaceSearchService.searchLocalPresets(trimmed)
+        if (immediateLocal.isNotEmpty()) {
+            _formState.update { it.copy(destinationSuggestions = immediateLocal) }
         }
         destinationSearchJob = viewModelScope.launch {
             delay(300)
             _formState.update { it.copy(destinationSearching = true) }
-            val results = PlaceSearchService.search(value)
+            val results = PlaceSearchService.search(trimmed)
             _formState.update { it.copy(destinationSuggestions = results, destinationSearching = false) }
         }
     }
