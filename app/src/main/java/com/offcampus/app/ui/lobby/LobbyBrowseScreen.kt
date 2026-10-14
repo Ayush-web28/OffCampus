@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -58,12 +59,15 @@ import com.offcampus.app.data.model.RideType
 fun LobbyBrowseScreen(
     onCreateLobby: () -> Unit,
     onOpenLobby: (String) -> Unit,
+    onOpenTripHistory: () -> Unit,
+    onOpenPaymentSplit: (String) -> Unit,
     unreadChatIds: Set<String> = emptySet(),
     viewModel: LobbyBrowseViewModel = viewModel()
 ) {
     val lobbies by viewModel.visibleLobbies.collectAsStateWithLifecycle()
     val hasAnyLobbies by viewModel.hasAnyLobbies.collectAsStateWithLifecycle()
     val activeLobby by viewModel.activeLobby.collectAsStateWithLifecycle()
+    val pendingPayment by viewModel.pendingPayment.collectAsStateWithLifecycle()
     val currentUserId = viewModel.currentUserId
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
@@ -100,11 +104,23 @@ fun LobbyBrowseScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            Text(
-                "Lobbies",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Lobbies",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                OutlinedButton(
+                    onClick = onOpenTripHistory
+                ) {
+                    Text("Past rides")
+                }
+            }
 
             OutlinedTextField(
                 value = filters.destinationQuery,
@@ -246,7 +262,7 @@ fun LobbyBrowseScreen(
                 )
             }
 
-            AnimatedVisibility(visible = lobbies.isEmpty() && activeLobby == null) {
+            AnimatedVisibility(visible = lobbies.isEmpty() && activeLobby == null && pendingPayment == null) {
                 EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
             }
 
@@ -264,6 +280,15 @@ fun LobbyBrowseScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                pendingPayment?.let { info ->
+                    item(key = "pending_payment_${info.lobbyId}") {
+                        PendingPaymentBanner(
+                            info = info,
+                            onClick = { onOpenPaymentSplit(info.lobbyId) }
+                        )
+                    }
+                }
+
                 activeLobby?.let { active ->
                     item(key = "active_ride_${active.id}") {
                         ActiveRideCard(

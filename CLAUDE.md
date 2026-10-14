@@ -178,6 +178,14 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - In `LobbyBrowseScreen.kt`, pinned `ActiveRideCard` as the first item in the lobby list and updated `EmptyLobbiesState` to hide whenever an active ride is present.
   - Verified on Pixel 7 emulator: created lobby, closed and returned to Lobbies screen, verified active lobby pinned at top with `OPEN` status; opened lobby, locked it, returned to Lobbies screen, and verified card remained pinned at top with `LOCKED` status.
 
+- **Fix 34 — Add past rides header shortcut and live unsettled payment banner** (feature request: after a ride is finished and the app is closed and reopened later, allow riders and lobby masters to easily view past lobbies and track unsettled payments without having to hunt through settings or profile tabs).
+  - In `LobbyBrowseScreen.kt`, added a "Past rides" `OutlinedButton` shortcut directly in the header row next to the "Lobbies" title, immediately opening `TripHistoryScreen` from the home screen.
+  - In `LobbyBrowseViewModel.kt`, added real-time listeners for `paymentSplits` both where user is a participant (`whereArrayContains("participantIds", uid)`) and where user is payer (`whereEqualTo("paidBy", uid)`).
+  - Derived `pendingPayment` state tracking unsettled amounts (whether the user owes a split amount or is the payer awaiting confirmations from riders).
+  - In `LobbyCard.kt`, created `PendingPaymentBanner` composable styled with theme tertiary accent, displaying the pending amount and trip destination with a 1-tap "Settle →" or "View →" action navigating directly to `PaymentSplitScreen`.
+  - Pinned `PendingPaymentBanner` at the top of the browse screen and wired navigation in `OffCampusNavHost.kt`.
+  - Verified on Pixel 7 emulator: tested "Past rides" shortcut opening `TripHistoryScreen` from the Lobbies header, inspected screen navigation, and verified build and live reactivity.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

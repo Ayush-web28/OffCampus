@@ -132,6 +132,8 @@ fun OffCampusNavHost() {
                 LobbyBrowseScreen(
                     onCreateLobby = { navController.navigate(Routes.POST_TRIP) },
                     onOpenLobby = { lobbyId -> navController.navigate(Routes.lobbyDetail(lobbyId)) },
+                    onOpenTripHistory = { navController.navigate(Routes.TRIP_HISTORY) },
+                    onOpenPaymentSplit = { lobbyId -> navController.navigate(Routes.paymentSplit(lobbyId)) },
                     unreadChatIds = unreadChatIds
                 )
             }

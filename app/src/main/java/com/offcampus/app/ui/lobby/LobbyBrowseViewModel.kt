@@ -12,6 +12,7 @@ import com.offcampus.app.data.PlaceSuggestion
 import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
+import com.offcampus.app.data.model.PaymentSplit
 import com.offcampus.app.data.model.RideType
 import com.offcampus.app.data.model.Rider
 import kotlinx.coroutines.Job
@@ -33,6 +34,13 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 enum class SortOption { NEWEST, SOONEST, MOST_OPEN }
+
+data class PendingPaymentInfo(
+    val lobbyId: String,
+    val isPayer: Boolean,
+    val amount: Double,
+    val destination: String
+)
 
 /** Carries the lobby's own id alongside the message so the Snackbar shown for it can act as a
  * shortcut straight into that lobby, instead of just informing and leaving the user to go find
@@ -73,9 +81,17 @@ class LobbyBrowseViewModel : ViewModel() {
     private val _activeLobby = MutableStateFlow<Lobby?>(null)
     val activeLobby: StateFlow<Lobby?> = _activeLobby.asStateFlow()
 
+    private val _pendingPayment = MutableStateFlow<PendingPaymentInfo?>(null)
+    val pendingPayment: StateFlow<PendingPaymentInfo?> = _pendingPayment.asStateFlow()
+
     private var lobbyListener: ListenerRegistration? = null
     private var riderListener: ListenerRegistration? = null
     private var activeLobbyListener: ListenerRegistration? = null
+    private var paymentParticipantListener: ListenerRegistration? = null
+    private var paymentPayerListener: ListenerRegistration? = null
+    private val _asParticipantSplits = MutableStateFlow<List<PaymentSplit>>(emptyList())
+    private val _asPayerSplits = MutableStateFlow<List<PaymentSplit>>(emptyList())
+    private var pendingPaymentJob: Job? = null
     private var authListener: FirebaseAuth.AuthStateListener? = null
 
     // What the typed search text resolves to as a real place — null whenever it's too short,
@@ -123,8 +139,14 @@ class LobbyBrowseViewModel : ViewModel() {
     private fun attachRiderListener(id: String?) {
         riderListener?.remove()
         activeLobbyListener?.remove()
+        paymentParticipantListener?.remove()
+        paymentPayerListener?.remove()
+        pendingPaymentJob?.cancel()
         _friendIds.value = emptySet()
         _activeLobby.value = null
+        _asParticipantSplits.value = emptyList()
+        _asPayerSplits.value = emptyList()
+        _pendingPayment.value = null
         if (id == null) return
         riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
             _friendIds.value = snapshot?.toObject(Rider::class.java)?.friendIds?.toSet() ?: emptySet()
@@ -138,6 +160,77 @@ class LobbyBrowseViewModel : ViewModel() {
                     ?.maxByOrNull { it.departureTime.seconds }
                 _activeLobby.value = active
             }
+        paymentParticipantListener = FirebaseRefs.paymentSplits
+            .whereArrayContains("participantIds", id)
+            .addSnapshotListener { snapshot, _ ->
+                _asParticipantSplits.value = snapshot?.documents
+                    ?.mapNotNull { doc -> doc.toObject(PaymentSplit::class.java)?.copy(id = doc.id) }
+                    ?: emptyList()
+                recomputePendingPayment(id)
+            }
+        paymentPayerListener = FirebaseRefs.paymentSplits
+            .whereEqualTo("paidBy", id)
+            .addSnapshotListener { snapshot, _ ->
+                _asPayerSplits.value = snapshot?.documents
+                    ?.mapNotNull { doc -> doc.toObject(PaymentSplit::class.java)?.copy(id = doc.id) }
+                    ?: emptyList()
+                recomputePendingPayment(id)
+            }
+    }
+
+    private fun recomputePendingPayment(userId: String) {
+        pendingPaymentJob?.cancel()
+        val allSplits = (_asParticipantSplits.value + _asPayerSplits.value).distinctBy { it.id }
+
+        // 1. Participant who owes money on an unsettled split
+        val oweSplit = allSplits
+            .filter { split -> split.participants.any { it.userId == userId && !it.settled } }
+            .maxByOrNull { it.createdAt.seconds }
+
+        if (oweSplit != null) {
+            val owed = oweSplit.participants.firstOrNull { it.userId == userId }?.owedAmount ?: 0.0
+            pendingPaymentJob = viewModelScope.launch {
+                val dest = try {
+                    FirebaseRefs.lobbies.document(oweSplit.lobbyId).get().await()
+                        .toObject(Lobby::class.java)?.destination
+                } catch (e: Exception) {
+                    null
+                } ?: "trip"
+                _pendingPayment.value = PendingPaymentInfo(
+                    lobbyId = oweSplit.lobbyId,
+                    isPayer = false,
+                    amount = owed,
+                    destination = dest
+                )
+            }
+            return
+        }
+
+        // 2. Payer awaiting settlements from others
+        val payerSplit = allSplits
+            .filter { split -> split.paidBy == userId && split.participants.any { !it.settled } }
+            .maxByOrNull { it.createdAt.seconds }
+
+        if (payerSplit != null) {
+            val unsettled = payerSplit.participants.filter { !it.settled }.sumOf { it.owedAmount }
+            pendingPaymentJob = viewModelScope.launch {
+                val dest = try {
+                    FirebaseRefs.lobbies.document(payerSplit.lobbyId).get().await()
+                        .toObject(Lobby::class.java)?.destination
+                } catch (e: Exception) {
+                    null
+                } ?: "trip"
+                _pendingPayment.value = PendingPaymentInfo(
+                    lobbyId = payerSplit.lobbyId,
+                    isPayer = true,
+                    amount = unsettled,
+                    destination = dest
+                )
+            }
+            return
+        }
+
+        _pendingPayment.value = null
     }
 
     private fun notifyFriendLobby(lobby: Lobby) {
@@ -253,6 +346,9 @@ class LobbyBrowseViewModel : ViewModel() {
         lobbyListener?.remove()
         riderListener?.remove()
         activeLobbyListener?.remove()
+        paymentParticipantListener?.remove()
+        paymentPayerListener?.remove()
+        pendingPaymentJob?.cancel()
     }
 }
 
