@@ -212,6 +212,23 @@ A **real bug** did surface, though, the first time this was tested against an ac
     - In `LocationAutocompleteField.kt`, changed `dismissed` state to `remember(suggestions) { mutableStateOf(false) }` so newly arrived suggestions automatically reset dismissal and show the dropdown.
     - Verified on Pixel 7 emulator: tested typing "Gate" and selecting "Gate 1 (Main Gate)", typing "BKC" and selecting "Bandra Kurla Complex (BKC)", confirming text fields and coordinate states populate accurately and dropdowns dismiss cleanly.
 
+- **Fix 37 — Design overhaul with Stitch Neo-Transit design system across app screens** (UI/UX overhaul: integrated Google Stitch Neo-Transit design tokens and layout across `LobbyCard`, `PostTripScreen`, `LobbyDetailScreen`, `ProfileScreen`, `LobbyBrowseScreen`, `TripHistoryScreen`, and `PaymentSplitScreen`).
+  - Fetched all screens and design tokens from Google Stitch project `OffCampus` (`projects/2162408128858453088`):
+    - Color tokens: Primary/PrimaryContainer `#3E1CDE` / `#5842F5` (Electric Indigo), Secondary/SecondaryContainer `#855300` / `#FEA619` (Transit Amber), Tertiary/TertiaryContainer `#00724D` / `#10B981` (Emerald Settlement), Slate canvas `#F8FAFC`, Surface `#FFFFFF`, Outline `#CBD5E1`, OutlineVariant `#E2E8F0`.
+    - Component shapes: 16dp rounded card corners, stadium pills (`RoundedCornerShape(999.dp)`), 1dp subtle border strokes (`outlineVariant`).
+  - Updated `Color.kt` and `Theme.kt` with full Light and Dark mode contrast mappings for Neo-Transit tokens.
+  - Redesigned `LobbyCard.kt`: 16dp rounded cards, 1dp subtle borders, bold route with directional arrow (`→`), amber Auto pill and indigo Cab pill, active master top accent bar, and emerald pending payment banner.
+  - Redesigned `PostTripScreen.kt` to match Stitch Screen 2: step progress indicator pill, 16dp rounded input cards, departure time card with clock badge, tactile group size grid, Auto/Cab vehicle cards with icons, savings split estimate banner, and 52dp stadium pill CTA.
+  - Redesigned `LobbyDetailScreen.kt`: updated route header card with status badge, refined riders list with host badge, updated provider booking buttons (Uber, Ola, Rapido) to `primaryContainer`, high-contrast Emerald `tertiary` button for "Ride's done — split the fare" to ensure visual distinction, and stadium pill chat button.
+  - Applied cohesive UI to screens not uploaded to Stitch:
+    - `ProfileScreen.kt`: 20dp profile card header with "Campus Verified" badge, dual metric cards for Rating and Friends, settings action items with rounded icon surfaces, and themed sign-out button.
+    - `LobbyBrowseScreen.kt`: Electric indigo rounded FAB, bold headline typography, stadium pill "Past rides" header button, 16dp search field, and stadium filter chips.
+    - `TripHistoryScreen.kt`: 16dp rounded cards, bold destinations, and status pills (emerald "Settled" / amber "Pending").
+    - `PostFareScreen.kt`: 16dp rounded text fields, stadium split-mode filter chips, and full-width stadium CTA.
+    - `PaymentSplitScreen.kt`: 16dp rounded total card, individual participant cards with status pills, and stadium action buttons.
+  - Added `androidx.compose.material:material-icons-extended` dependency in `app/build.gradle.kts`.
+  - Built and verified on Pixel 7 emulator (`emulator-5554`) with screenshots captured and visually verified across Lobbies, Post a Trip, Lobby Detail, Profile, and Trip History.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

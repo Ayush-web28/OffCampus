@@ -4,23 +4,31 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +47,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -98,29 +108,96 @@ fun LobbyDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            Text("${current.gate} → ${current.destination}", style = MaterialTheme.typography.headlineMedium)
-            Text(
-                current.checkpoint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                Text(
-                    SimpleDateFormat("h:mm a", Locale.getDefault()).format(current.departureTime.toDate()),
-                    style = MaterialTheme.typography.labelLarge
-                )
-                RideTypeChip(current.rideType)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val isLocked = current.status == LobbyStatus.LOCKED
+                        val statusBg = if (isLocked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f)
+                        val statusColor = if (isLocked) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.tertiary
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .background(statusBg, RoundedCornerShape(999.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            if (isLocked) {
+                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(12.dp), tint = statusColor)
+                            }
+                            Text(
+                                text = if (isLocked) "LOBBY LOCKED" else "LOBBY OPEN",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor
+                            )
+                        }
+                        RideTypeChip(current.rideType)
+                    }
+
+                    Text(
+                        text = "${current.gate} → ${current.destination}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 10.dp)
+                    )
+
+                    Text(
+                        text = "Meeting point: ${current.checkpoint}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = SimpleDateFormat("h:mm a", Locale.getDefault()).format(current.departureTime.toDate()),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "${current.memberIds.size} / ${current.maxSize} riders",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Text(
-                "${current.memberIds.size} / ${current.maxSize} riders",
+                "Riders in lobby",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp)
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
             )
 
             var riderToRemove by remember { mutableStateOf<Rider?>(null) }
@@ -189,8 +266,11 @@ fun LobbyDetailScreen(
                     viewModel.currentUid in current.memberIds -> OutlinedButton(
                         onClick = viewModel::leave,
                         enabled = !isUpdating,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Leave lobby") }
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) { Text("Leave lobby", fontWeight = FontWeight.SemiBold) }
                     current.memberIds.size < current.maxSize -> JoinLobbyButton(
                         isUpdating = isUpdating,
                         onClick = viewModel::join
@@ -207,8 +287,27 @@ fun LobbyDetailScreen(
             // pickup time/spot matters most right after locking, not before.
             val isParticipant = viewModel.currentUid == current.createdBy || viewModel.currentUid in current.memberIds
             if (isParticipant) {
-                OutlinedButton(onClick = onOpenChat, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                    Text("Open chat")
+                OutlinedButton(
+                    onClick = onOpenChat,
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(top = 16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ChatBubble,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Open lobby chat",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
             }
         }
@@ -223,22 +322,26 @@ private fun MemberRow(
     onRemove: () -> Unit = {}
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = member.avatarId, photoUrl = member.photoUrl, photoBase64 = member.photoBase64, size = 32.dp)
-        Text(
-            member.name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(start = 10.dp)
-        )
-        if (isMaster) {
+        AvatarView(avatarId = member.avatarId, photoUrl = member.photoUrl, photoBase64 = member.photoBase64, size = 36.dp)
+        Column(modifier = Modifier.padding(start = 12.dp)) {
             Text(
-                "Lobby master",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp)
+                member.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
             )
+            if (isMaster) {
+                Text(
+                    "Lobby Host",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
         if (canRemove) {
             Spacer(modifier = Modifier.weight(1f))
@@ -246,7 +349,7 @@ private fun MemberRow(
                 onClick = onRemove,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Remove", style = MaterialTheme.typography.labelMedium)
+                Text("Remove", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -266,27 +369,31 @@ private fun JoinLobbyButton(isUpdating: Boolean, onClick: () -> Unit) {
         if (!isUpdating && tapped) tapped = false
     }
     val containerColor by animateColorAsState(
-        targetValue = if (tapped) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+        targetValue = if (tapped) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primaryContainer,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
         label = "joinButtonColor"
     )
     Button(
         onClick = { tapped = true; onClick() },
         enabled = !isUpdating && !tapped,
+        shape = RoundedCornerShape(999.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            disabledContainerColor = containerColor
+            disabledContainerColor = containerColor,
+            contentColor = Color.White
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
         AnimatedContent(targetState = tapped, label = "joinButtonContent") { joined ->
             if (joined) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("Joined", modifier = Modifier.padding(start = 6.dp))
+                    Text("Joined", fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
                 }
             } else {
-                Text("Join lobby")
+                Text("Join lobby", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -304,21 +411,31 @@ private fun LobbyMasterControls(canLock: Boolean, isUpdating: Boolean, onLock: (
         Button(
             onClick = onLock,
             enabled = canLock && !isUpdating,
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Lock lobby") }
+            shape = RoundedCornerShape(999.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = Color.White
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) { Text("Lock lobby", fontWeight = FontWeight.Bold) }
     }
 }
 
 @Composable
 private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) {
     val context = LocalContext.current
-    val backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
-    Card(colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = backgroundColor)) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Lobby locked — book the ride", style = MaterialTheme.typography.titleLarge)
+            Text("Lobby locked — book the ride", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
                 "Pickup uses your current location in each app; drop-off is passed as a text hint, not an exact pin.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
@@ -327,13 +444,17 @@ private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) 
             }
             Button(
                 onClick = onSplitFare,
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary
+                    contentColor = Color.White
                 ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(top = 8.dp)
             ) {
-                Text("Ride's done — split the fare")
+                Text("Ride's done — split the fare", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -357,29 +478,40 @@ private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
     }
     Button(
         onClick = { opening = true; onOpen() },
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = Color.White
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .padding(bottom = 8.dp)
     ) {
         if (opening) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = Color.White
             )
-            Text("Opening ${link.label}…", modifier = Modifier.padding(start = 8.dp))
+            Text("Opening ${link.label}…", modifier = Modifier.padding(start = 8.dp), fontWeight = FontWeight.Medium)
         } else {
-            Text("Open in ${link.label}")
+            Text("Open in ${link.label}", fontWeight = FontWeight.Medium)
         }
     }
 }
 
 @Composable
 private fun LockedRideInProgressCard() {
-    val backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
-    Card(colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = backgroundColor)) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Lobby locked — ride in progress", style = MaterialTheme.typography.titleLarge)
+            Text("Lobby locked — ride in progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "The lobby master's booking the ride. Once it's done, they'll split the fare here.",
+                "The lobby master is booking the ride. Once it's done, they'll split the fare here.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -390,19 +522,31 @@ private fun LockedRideInProgressCard() {
 
 @Composable
 private fun CompletedTripCard(onViewSplit: () -> Unit) {
-    val backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f)
-    Card(colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = backgroundColor)) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Trip completed", style = MaterialTheme.typography.titleLarge)
+            Text("Trip completed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "The fare's been split — check who's settled up.",
+                "The fare has been split — check who's settled up.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
-            Button(onClick = onViewSplit, modifier = Modifier.fillMaxWidth()) {
-                Text("View payment split")
+            Button(
+                onClick = onViewSplit,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Text("View payment split", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
+

@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -49,6 +51,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -105,7 +109,12 @@ fun LobbyBrowseScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateLobby) {
+            FloatingActionButton(
+                onClick = onCreateLobby,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp)
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Post a trip")
             }
         }
@@ -127,12 +136,15 @@ fun LobbyBrowseScreen(
                 ) {
                     Text(
                         "Lobbies",
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
                     )
                     OutlinedButton(
-                        onClick = onOpenTripHistory
+                        onClick = onOpenTripHistory,
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Text("Past rides")
+                        Text("Past rides", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -143,6 +155,7 @@ fun LobbyBrowseScreen(
                     onValueChange = viewModel::onDestinationQueryChange,
                     label = { Text("Search destination") },
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     trailingIcon = if (queryLoading) {
                         {
                             CircularProgressIndicator(
@@ -172,6 +185,7 @@ fun LobbyBrowseScreen(
                         FilterChip(
                             selected = filters.rideType != null,
                             onClick = { rideTypeMenuExpanded = true },
+                            shape = RoundedCornerShape(999.dp),
                             label = {
                                 Text(
                                     when (filters.rideType) {
@@ -222,6 +236,7 @@ fun LobbyBrowseScreen(
                         FilterChip(
                             selected = filters.sort != SortOption.NEWEST,
                             onClick = { sortMenuExpanded = true },
+                            shape = RoundedCornerShape(999.dp),
                             label = {
                                 Text(
                                     when (filters.sort) {
@@ -271,6 +286,7 @@ fun LobbyBrowseScreen(
                     FilterChip(
                         selected = filters.friendsOnly,
                         onClick = { viewModel.onFriendsOnlyChange(!filters.friendsOnly) },
+                        shape = RoundedCornerShape(999.dp),
                         label = { Text("Friends only") }
                     )
                 }

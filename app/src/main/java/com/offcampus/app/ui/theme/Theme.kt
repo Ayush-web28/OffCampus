@@ -9,41 +9,53 @@ import androidx.compose.runtime.Composable
 private val LightColors = lightColorScheme(
     primary = LightViolet,
     onPrimary = LightSurface,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
     secondary = LightAmber,
-    onSecondary = LightOnBackground,
+    onSecondary = LightSurface,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
     tertiary = LightGreen,
     onTertiary = LightSurface,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightSurface,
     error = LightCoral,
     background = LightBackground,
     onBackground = LightOnBackground,
     surface = LightSurface,
-    onSurface = LightOnBackground,
+    onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightBorder
+    outline = LightBorder,
+    outlineVariant = LightOutlineVariant
 )
 
 private val DarkColors = darkColorScheme(
     primary = DarkViolet,
     onPrimary = DarkBackground,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkAmber,
     onSecondary = DarkBackground,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
     tertiary = DarkGreen,
     onTertiary = DarkBackground,
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiaryContainer = DarkOnTertiaryFixed,
     error = DarkCoral,
     background = DarkBackground,
     onBackground = DarkOnBackground,
     surface = DarkSurface,
-    onSurface = DarkOnBackground,
+    onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkBorder
+    outline = DarkBorder,
+    outlineVariant = DarkOutlineVariant
 )
 
 /**
- * App-wide theme. Deliberately does NOT use Android 12's dynamic (wallpaper-based) color —
- * OffCampus has its own fixed brand palette from the Phase 0 brief, and dynamic color would
- * make every install look different and drift away from that system.
+ * App-wide theme configured with Stitch "OffCampus Neo-Transit" design tokens.
  */
 @Composable
 fun OffCampusTheme(

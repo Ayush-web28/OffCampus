@@ -5,15 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -28,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,7 +56,7 @@ fun PostFareScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Split the fare") },
+                title = { Text("Split the fare", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -65,7 +70,10 @@ fun PostFareScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                CircularProgressIndicator(modifier = Modifier.padding(top = 64.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(top = 64.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
             return@Scaffold
         }
@@ -80,6 +88,7 @@ fun PostFareScreen(
             Text(
                 "Trip to ${form.destination}",
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -88,6 +97,7 @@ fun PostFareScreen(
                 onValueChange = viewModel::onTotalFareChange,
                 label = { Text("Total fare (₹)") },
                 singleLine = true,
+                shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             )
@@ -96,11 +106,13 @@ fun PostFareScreen(
                 FilterChip(
                     selected = form.splitMode == SplitMode.EQUAL,
                     onClick = { viewModel.onSplitModeChange(SplitMode.EQUAL) },
+                    shape = RoundedCornerShape(999.dp),
                     label = { Text("Split equally") }
                 )
                 FilterChip(
                     selected = form.splitMode == SplitMode.CUSTOM,
                     onClick = { viewModel.onSplitModeChange(SplitMode.CUSTOM) },
+                    shape = RoundedCornerShape(999.dp),
                     label = { Text("Custom amounts") }
                 )
             }
@@ -117,19 +129,23 @@ fun PostFareScreen(
                     AvatarView(avatarId = member.avatarId, photoUrl = member.photoUrl, photoBase64 = member.photoBase64, size = 36.dp)
                     Text(
                         member.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f).padding(start = 12.dp)
                     )
                     if (form.splitMode == SplitMode.EQUAL) {
                         Text(
                             "₹%.2f".format(equalShare),
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     } else {
                         OutlinedTextField(
                             value = form.customAmounts[member.id] ?: "",
                             onValueChange = { viewModel.onCustomAmountChange(member.id, it) },
                             singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.width(110.dp)
                         )
@@ -149,12 +165,24 @@ fun PostFareScreen(
             Button(
                 onClick = { viewModel.submit(onPosted) },
                 enabled = !form.isSubmitting,
-                modifier = Modifier.fillMaxWidth().padding(top = 24.dp)
+                shape = RoundedCornerShape(999.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .padding(top = 24.dp)
             ) {
                 if (form.isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
                 } else {
-                    Text("Confirm split")
+                    Text("Confirm split", fontWeight = FontWeight.Bold)
                 }
             }
         }
