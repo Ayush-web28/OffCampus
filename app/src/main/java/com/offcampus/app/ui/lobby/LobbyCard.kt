@@ -1,9 +1,11 @@
 package com.offcampus.app.ui.lobby
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.offcampus.app.data.model.Lobby
+import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.RideType
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -109,6 +113,108 @@ private fun SeatDots(filled: Int, total: Int, modifier: Modifier = Modifier) {
                     .size(8.dp)
                     .background(color = color, shape = CircleShape)
             ) {}
+        }
+    }
+}
+
+@Composable
+fun ActiveRideCard(
+    lobby: Lobby,
+    isMaster: Boolean,
+    hasUnreadChat: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        ),
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isMaster) "YOUR ACTIVE LOBBY (MASTER)" else "YOUR ACTIVE LOBBY",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (hasUnreadChat) {
+                        Column(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(color = MaterialTheme.colorScheme.error, shape = CircleShape)
+                        ) {}
+                    }
+                }
+
+                Text(
+                    text = if (lobby.status == LobbyStatus.LOCKED) "LOCKED" else "OPEN",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (lobby.status == LobbyStatus.LOCKED) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(
+                            (if (lobby.status == LobbyStatus.LOCKED) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary).copy(alpha = 0.15f),
+                            RoundedCornerShape(999.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            Text(
+                text = "${lobby.gate} → ${lobby.destination}",
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RideTypeChip(lobby.rideType)
+                    Text(
+                        text = timeFormat.format(lobby.departureTime.toDate()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "${lobby.memberIds.size}/${lobby.maxSize} riders",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Open lobby →",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }

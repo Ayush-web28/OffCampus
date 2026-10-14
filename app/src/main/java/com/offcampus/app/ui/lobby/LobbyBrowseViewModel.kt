@@ -68,8 +68,14 @@ class LobbyBrowseViewModel : ViewModel() {
     // already existed when the screen opened — only ones that arrive afterward.
     private var seenLobbyIds: MutableSet<String>? = null
 
+    val currentUserId: String? get() = uid
+
+    private val _activeLobby = MutableStateFlow<Lobby?>(null)
+    val activeLobby: StateFlow<Lobby?> = _activeLobby.asStateFlow()
+
     private var lobbyListener: ListenerRegistration? = null
     private var riderListener: ListenerRegistration? = null
+    private var activeLobbyListener: ListenerRegistration? = null
     private var authListener: FirebaseAuth.AuthStateListener? = null
 
     // What the typed search text resolves to as a real place — null whenever it's too short,
@@ -116,11 +122,22 @@ class LobbyBrowseViewModel : ViewModel() {
 
     private fun attachRiderListener(id: String?) {
         riderListener?.remove()
+        activeLobbyListener?.remove()
         _friendIds.value = emptySet()
+        _activeLobby.value = null
         if (id == null) return
         riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
             _friendIds.value = snapshot?.toObject(Rider::class.java)?.friendIds?.toSet() ?: emptySet()
         }
+        activeLobbyListener = FirebaseRefs.lobbies
+            .whereArrayContains("memberIds", id)
+            .addSnapshotListener { snapshot, _ ->
+                val active = snapshot?.documents
+                    ?.mapNotNull { doc -> doc.toObject(Lobby::class.java)?.copy(id = doc.id) }
+                    ?.filter { it.status == LobbyStatus.OPEN || it.status == LobbyStatus.LOCKED }
+                    ?.maxByOrNull { it.departureTime.seconds }
+                _activeLobby.value = active
+            }
     }
 
     private fun notifyFriendLobby(lobby: Lobby) {
@@ -171,6 +188,8 @@ class LobbyBrowseViewModel : ViewModel() {
                         SortOption.MOST_OPEN -> filtered.sortedByDescending { it.maxSize - it.memberIds.size }
                     }
                 }
+        }.combine(_activeLobby) { filtered, activeLobby ->
+            filtered.filter { it.id != activeLobby?.id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val hasAnyLobbies: StateFlow<Boolean> = _lobbies
@@ -233,6 +252,7 @@ class LobbyBrowseViewModel : ViewModel() {
         authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         lobbyListener?.remove()
         riderListener?.remove()
+        activeLobbyListener?.remove()
     }
 }
 

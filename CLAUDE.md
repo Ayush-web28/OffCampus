@@ -171,6 +171,13 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Tapping the `Sort: [Newest | Soonest | Most open] ▾` chip opens a `DropdownMenu` to select the sorting order, highlighting whenever a non-default order is selected.
   - Verified on Pixel 7 emulator: inspected single-row layout, opened Ride dropdown menu, selected Auto, verified filter label updated and filtered lobbies; opened Sort dropdown menu, selected Soonest, and verified sorting order updated live.
 
+- **Fix 33 — Pin active ride card at top of browse screen for open and locked lobbies** (feature request: when a lobby master creates a lobby for later or a rider joins a lobby, and later closes and reopens the app, keep the active lobby immediately visible and accessible at the top of the screen; also ensure locked lobbies remain visible to members rather than disappearing from browse).
+  - In `LobbyBrowseViewModel.kt`, added `_activeLobby` StateFlow observing user membership (`whereArrayContains("memberIds", uid)`), filtering for `OPEN` and `LOCKED` states.
+  - Excluded `activeLobby` from the generic `visibleLobbies` list to prevent duplicate cards.
+  - In `LobbyCard.kt`, created `ActiveRideCard` with distinct ticket-stub border, brand primary tint, "YOUR ACTIVE LOBBY (MASTER)" / "YOUR ACTIVE LOBBY" header, live status indicator (`OPEN` / `LOCKED`), unread chat notification dot, and one-tap access to the lobby details and chat.
+  - In `LobbyBrowseScreen.kt`, pinned `ActiveRideCard` as the first item in the lobby list and updated `EmptyLobbiesState` to hide whenever an active ride is present.
+  - Verified on Pixel 7 emulator: created lobby, closed and returned to Lobbies screen, verified active lobby pinned at top with `OPEN` status; opened lobby, locked it, returned to Lobbies screen, and verified card remained pinned at top with `LOCKED` status.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

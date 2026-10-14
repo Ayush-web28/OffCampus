@@ -63,6 +63,8 @@ fun LobbyBrowseScreen(
 ) {
     val lobbies by viewModel.visibleLobbies.collectAsStateWithLifecycle()
     val hasAnyLobbies by viewModel.hasAnyLobbies.collectAsStateWithLifecycle()
+    val activeLobby by viewModel.activeLobby.collectAsStateWithLifecycle()
+    val currentUserId = viewModel.currentUserId
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
     val friendLobbyNotification by viewModel.friendLobbyNotification.collectAsStateWithLifecycle()
@@ -244,7 +246,7 @@ fun LobbyBrowseScreen(
                 )
             }
 
-            AnimatedVisibility(visible = lobbies.isEmpty()) {
+            AnimatedVisibility(visible = lobbies.isEmpty() && activeLobby == null) {
                 EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
             }
 
@@ -262,6 +264,17 @@ fun LobbyBrowseScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                activeLobby?.let { active ->
+                    item(key = "active_ride_${active.id}") {
+                        ActiveRideCard(
+                            lobby = active,
+                            isMaster = active.createdBy == currentUserId,
+                            hasUnreadChat = active.id in unreadChatIds,
+                            onClick = { onOpenLobby(active.id) }
+                        )
+                    }
+                }
+
                 items(lobbies, key = { it.id }) { lobby ->
                     val alreadyAnimated = animatedLobbyIds.containsKey(lobby.id)
                     // Starts already-true (skipping the animation) for a lobby that's played it
