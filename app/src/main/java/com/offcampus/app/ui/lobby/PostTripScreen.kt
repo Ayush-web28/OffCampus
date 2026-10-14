@@ -26,8 +26,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ElectricRickshaw
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -103,56 +101,6 @@ fun PostTripScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            // Step Progress Indicator from Stitch Screen 2
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "1",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Text(
-                        text = "Route details",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 24.dp, height = 4.dp)
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    )
-                }
-            }
 
             // Input Fields with rounded corners & clean styling
             OutlinedTextField(
@@ -480,55 +428,6 @@ fun PostTripScreen(
                 }
             }
 
-            // Dynamic estimated fare calculation based on ride type and group capacity
-            val (minPerStudent, maxPerStudent, savePercent) = when (form.rideType) {
-                RideType.AUTO -> {
-                    val minEst = 100 / form.maxSize
-                    val maxEst = 135 / form.maxSize
-                    val save = ((1.0 - 1.0 / form.maxSize) * 100).toInt()
-                    Triple(minEst, maxEst, save)
-                }
-                RideType.CAB -> {
-                    val minEst = 180 / form.maxSize
-                    val maxEst = 240 / form.maxSize
-                    val save = ((1.0 - 1.0 / form.maxSize) * 100).toInt()
-                    Triple(minEst, maxEst, save)
-                }
-            }
-
-            // Fare Estimate Teaser Micro-Card from Stitch
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Savings,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.tertiary
-                    )
-                    Text(
-                        text = "Est. split: ₹$minPerStudent–₹$maxPerStudent / student",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Text(
-                    text = "SAVE $savePercent%",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-            }
 
             form.errorMessage?.let { message ->
                 Text(
@@ -550,9 +449,9 @@ fun PostTripScreen(
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                 modifier = Modifier
+                    .padding(top = 16.dp)
                     .fillMaxWidth()
                     .height(52.dp)
-                    .padding(top = 18.dp)
             ) {
                 if (form.isSubmitting) {
                     CircularProgressIndicator(

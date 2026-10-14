@@ -235,6 +235,12 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Upgraded the "Est. split" banner from static copy to dynamic computation based on current `rideType` and selected `maxSize` (typical campus Auto baseline ₹100–₹135 and Cab baseline ₹180–₹240), dynamically displaying live per-student cost ranges and savings percentages (50%–83%).
   - Verified on Pixel 7 emulator (`emulator-5554`) for both Auto (2, 3) and Cab (2, 3, 4, 5, 6) selection states.
 
+- **Fix 39 — Remove Est. split card and step progress indicator from Create Lobby screen** (UI/UX cleanup: streamlined `PostTripScreen.kt` by removing redundant step indicator and estimated split card).
+  - Removed the "1 Route details" step indicator and progress dots from the top of the form, allowing the input fields to start cleanly right below the TopAppBar.
+  - Removed the "Est. split" fare savings banner and calculation, decluttering the bottom section of the screen.
+  - Fixed Button modifier ordering to apply top margin padding before height and width constraints, ensuring the 52dp stadium pill CTA retains full visual height without content squeezing.
+  - Verified on Pixel 7 emulator (`emulator-5554`) with screenshots (`emu_posttrip_now.png`, `emu_posttrip_cab_now.png`).
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
