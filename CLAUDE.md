@@ -144,6 +144,13 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Updated `firestore.rules` with `isRemovingRider()` permitting the lobby creator to remove members from `OPEN` or `LOCKED` lobbies, and deployed the ruleset to Firebase.
   - Verified live on Pixel 7 emulator: created a test lobby with master Alex and member Kabir Mehta, tapped "Remove", verified confirmation dialog, confirmed removal, and verified member count dropped from 2/3 to 1/3 and member was removed from the live list without issues.
 
+- **Fix 28 — Replaced fixed departure minute offset chips with custom departure time picker during lobby creation** (feature request: instead of preset options like leaving in 15 mins, 30 mins, 60 mins etc., riders can set the exact departure time themselves).
+  - In `PostTripViewModel.kt`, replaced `departureInMinutes: Int = 30` with `departureTime: Date = defaultDepartureTime()` (defaults to 30 minutes from current time).
+  - Added `onDepartureTimeSelected(hourOfDay, minute)`: creates a target `Calendar` set to the selected hour and minute; if the chosen time has already passed today (with a 1-minute buffer), it automatically schedules for tomorrow.
+  - In `submit()`, sets `departureTime = Timestamp(form.departureTime)`. Removed the fixed `DEPARTURE_OFFSET_MINUTES` presets.
+  - In `PostTripScreen.kt`, replaced the "Leaving in" `ChipRow` with an interactive `OutlinedCard` displaying the formatted time ("Today, 8:00 PM" / "Tomorrow, 7:30 AM") and a "Change" button that opens Android's native `TimePickerDialog` (12-hour format with clock dial and keyboard input options).
+  - Verified on Pixel 7 emulator: opened lobby creation, confirmed initial departure time, tapped time picker card, selected custom time (9:32 PM), confirmed the displayed time updated live in the card, and successfully posted the lobby and verified it appeared with the selected time on the browse screen.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

@@ -1,5 +1,6 @@
 package com.offcampus.app.ui.lobby
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,17 +19,24 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offcampus.app.data.model.RideType
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +46,7 @@ fun PostTripScreen(
     viewModel: PostTripViewModel = viewModel()
 ) {
     val form by viewModel.formState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -87,13 +96,46 @@ fun PostTripScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             )
 
-            Text("Leaving in", style = MaterialTheme.typography.titleMedium)
-            ChipRow(modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)) {
-                DEPARTURE_OFFSET_MINUTES.forEach { minutes ->
-                    FilterChip(
-                        selected = form.departureInMinutes == minutes,
-                        onClick = { viewModel.onDepartureChange(minutes) },
-                        label = { Text(formatOffset(minutes)) }
+            Text("Departure time", style = MaterialTheme.typography.titleMedium)
+            OutlinedCard(
+                onClick = {
+                    val cal = Calendar.getInstance().apply { time = form.departureTime }
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            viewModel.onDepartureTimeSelected(hourOfDay, minute)
+                        },
+                        cal.get(Calendar.HOUR_OF_DAY),
+                        cal.get(Calendar.MINUTE),
+                        false
+                    ).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 20.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Time",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatDepartureTimeDisplay(form.departureTime),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                    Text(
+                        text = "Change",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -157,8 +199,13 @@ private fun ChipRow(modifier: Modifier = Modifier, content: @Composable () -> Un
     ) { content() }
 }
 
-private fun formatOffset(minutes: Int): String = when {
-    minutes < 60 -> "$minutes min"
-    minutes % 60 == 0 -> "${minutes / 60} hr"
-    else -> "${minutes / 60}.5 hr"
+private fun formatDepartureTimeDisplay(date: Date): String {
+    val cal = Calendar.getInstance().apply { time = date }
+    val now = Calendar.getInstance()
+    val timeStr = SimpleDateFormat("h:mm a", Locale.getDefault()).format(date)
+    return if (cal.get(Calendar.DAY_OF_YEAR) != now.get(Calendar.DAY_OF_YEAR) || cal.get(Calendar.YEAR) != now.get(Calendar.YEAR)) {
+        "Tomorrow, $timeStr"
+    } else {
+        "Today, $timeStr"
+    }
 }

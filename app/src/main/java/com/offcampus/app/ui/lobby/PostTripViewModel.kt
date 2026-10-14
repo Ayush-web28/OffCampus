@@ -19,12 +19,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 import java.util.Date
 
-// Preset "leaving in" offsets rather than a full date/time picker — this app is for a ride
-// happening in the next few hours, not scheduling a trip next week, so a quick chip picks
-// the moment better than a calendar widget would.
-val DEPARTURE_OFFSET_MINUTES = listOf(15, 30, 60, 90, 120, 180)
+private fun defaultDepartureTime(): Date = Calendar.getInstance().apply {
+    add(Calendar.MINUTE, 30)
+}.time
 
 // A real auto-rickshaw is licensed for 3 passengers, full stop — a cab (sedan/SUV) has real
 // room to flex, so only auto gets the tighter cap. Keyed off ride type rather than one fixed
@@ -48,7 +48,7 @@ data class PostTripFormState(
     // looking unresponsive for however long the request takes.
     val gateSearching: Boolean = false,
     val destinationSearching: Boolean = false,
-    val departureInMinutes: Int = 30,
+    val departureTime: Date = defaultDepartureTime(),
     val maxSize: Int = 3,
     val rideType: RideType = RideType.AUTO,
     val isSubmitting: Boolean = false,
@@ -125,7 +125,21 @@ class PostTripViewModel : ViewModel() {
         }
     }
 
-    fun onDepartureChange(minutes: Int) = _formState.update { it.copy(departureInMinutes = minutes) }
+    fun onDepartureTimeSelected(hourOfDay: Int, minute: Int) {
+        val now = Calendar.getInstance()
+        val target = (now.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, hourOfDay)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            // If the selected time has already passed today (with a 1-minute buffer), assume tomorrow
+            if (timeInMillis < now.timeInMillis - 60_000L) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+        _formState.update { it.copy(departureTime = target.time) }
+    }
+
     fun onMaxSizeChange(size: Int) = _formState.update { it.copy(maxSize = size) }
 
     // Switching to Auto while a larger Cab-only group size is selected clamps it back down to
@@ -164,7 +178,7 @@ class PostTripViewModel : ViewModel() {
                     gateLng = form.gateLng,
                     destinationLat = form.destinationLat,
                     destinationLng = form.destinationLng,
-                    departureTime = Timestamp(Date(System.currentTimeMillis() + form.departureInMinutes * 60_000L)),
+                    departureTime = Timestamp(form.departureTime),
                     rideType = form.rideType,
                     maxSize = form.maxSize,
                     memberIds = listOf(uid),
