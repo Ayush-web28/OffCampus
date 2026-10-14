@@ -264,7 +264,14 @@ private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) 
             rideBookingLinks(destination).forEach { link ->
                 RideBookingButton(link = link, onOpen = { openRideBookingLink(context, link) })
             }
-            OutlinedButton(onClick = onSplitFare, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Button(
+                onClick = onSplitFare,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            ) {
                 Text("Ride's done — split the fare")
             }
         }
