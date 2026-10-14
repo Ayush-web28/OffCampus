@@ -73,6 +73,23 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
     fun join() = updateMembers { FieldValue.arrayUnion(it) }
     fun leave() = updateMembers { FieldValue.arrayRemove(it) }
 
+    /** Master can remove a member from the lobby (cannot remove themselves). */
+    fun removeRider(riderId: String) {
+        val uid = currentUid ?: return
+        val currentLobby = _lobby.value ?: return
+        if (currentLobby.createdBy != uid || riderId == currentLobby.createdBy) return
+        viewModelScope.launch {
+            _isUpdating.value = true
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayRemove(riderId)).await()
+            } catch (e: Exception) {
+                // Safe catch prevents crash on unexpected network/permission issues
+            } finally {
+                _isUpdating.value = false
+            }
+        }
+    }
+
     private fun updateMembers(fieldValue: (String) -> FieldValue) {
         val id = currentUid ?: return
         viewModelScope.launch {

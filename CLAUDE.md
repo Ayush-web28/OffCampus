@@ -137,6 +137,13 @@ A **real bug** did surface, though, the first time this was tested against an ac
 
   Verified on the Pixel 7 emulator: posted and locked test lobbies, then visually inspected screenshots in both dark mode (`cmd uimode night yes`) and light mode (`cmd uimode night no`), verifying crisp contrast, clear legibility, and distinct visual hierarchy from the ride-booking buttons.
 
+- **Fix 27 — Lobby master option to remove/kick riders from active lobbies** (feature request: the lobby master previously had no way to remove an unwanted rider or no-show who joined their lobby).
+  - Added `removeRider(riderId)` in `LobbyDetailViewModel.kt`: uses `FieldValue.arrayRemove(riderId)` with guards ensuring only the lobby master (`createdBy == currentUid`) can remove members, and the master cannot remove themselves. Safely catches any write errors.
+  - In `LobbyDetailScreen.kt`, updated `MemberRow` to display a "Remove" button (styled with `MaterialTheme.colorScheme.error`) only when viewed by the lobby master and targeting non-master members while the lobby is active (`status != COMPLETED`).
+  - Added a confirmation `AlertDialog` ("Remove rider?") before executing the kick to prevent accidental removals.
+  - Updated `firestore.rules` with `isRemovingRider()` permitting the lobby creator to remove members from `OPEN` or `LOCKED` lobbies, and deployed the ruleset to Firebase.
+  - Verified live on Pixel 7 emulator: created a test lobby with master Alex and member Kabir Mehta, tapped "Remove", verified confirmation dialog, confirmed removal, and verified member count dropped from 2/3 to 1/3 and member was removed from the live list without issues.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -25,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -111,12 +114,48 @@ fun LobbyDetailScreen(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )
+
+            var riderToRemove by remember { mutableStateOf<Rider?>(null) }
+            riderToRemove?.let { rider ->
+                AlertDialog(
+                    onDismissRequest = { riderToRemove = null },
+                    title = { Text("Remove rider") },
+                    text = { Text("Are you sure you want to remove ${rider.name} from this lobby?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.removeRider(rider.id)
+                                riderToRemove = null
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Remove")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { riderToRemove = null }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
             // Shown inline, before any "Join" decision — knowing who you'd actually be riding
             // with matters most right when you're deciding whether to join a lobby you found
             // browsing, not after you're already in it.
+            val isCurrentMaster = viewModel.currentUid == current.createdBy
             if (members.isNotEmpty()) {
                 Column(modifier = Modifier.padding(top = 8.dp)) {
-                    members.forEach { member -> MemberRow(member = member, isMaster = member.id == current.createdBy) }
+                    members.forEach { member ->
+                        val isThisMemberMaster = member.id == current.createdBy
+                        val canRemove = isCurrentMaster && !isThisMemberMaster && current.status != LobbyStatus.COMPLETED
+                        MemberRow(
+                            member = member,
+                            isMaster = isThisMemberMaster,
+                            canRemove = canRemove,
+                            onRemove = { riderToRemove = member }
+                        )
+                    }
                 }
             }
 
@@ -169,7 +208,12 @@ fun LobbyDetailScreen(
 }
 
 @Composable
-private fun MemberRow(member: Rider, isMaster: Boolean) {
+private fun MemberRow(
+    member: Rider,
+    isMaster: Boolean,
+    canRemove: Boolean = false,
+    onRemove: () -> Unit = {}
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -187,6 +231,15 @@ private fun MemberRow(member: Rider, isMaster: Boolean) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 8.dp)
             )
+        }
+        if (canRemove) {
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(
+                onClick = onRemove,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Remove", style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
 }
