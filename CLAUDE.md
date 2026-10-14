@@ -165,6 +165,12 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - In `LobbyBrowseScreen.kt`, updated `snackbarHostState.showSnackbar()` to configure `withDismissAction = true` and `duration = SnackbarDuration.Short`, giving users an explicit "X" dismiss action and ensuring the notification banner automatically times out rather than persisting indefinitely (which is Material 3's default when an action label is provided without an explicit duration).
   - Added a `DisposableEffect(Unit)` on `LobbyBrowseScreen` that dismisses `currentSnackbarData` and triggers `viewModel.dismissFriendLobbyNotification()` when the screen is disposed (such as switching tabs to Friends or Profile, or opening a lobby), preventing stale notification banners from lingering upon re-entry.
 
+- **Fix 32 — Replace multi-row filter chips with compact side-by-side dropdown filter bar** (feature request: simplify and clean up multiple filter chip rows on the main lobby browse screen using compact dropdowns).
+  - In `LobbyBrowseScreen.kt`, replaced the two scrolling rows of individual chips with a single clean, horizontally scrollable row containing two dropdown filter pills (`Ride Type` and `Sort`) and one `Friends only` toggle chip.
+  - Tapping the `Ride: [All | Auto | Cab] ▾` chip opens a `DropdownMenu` to select between all rides, Auto, or Cab, with the chip highlighting whenever a specific ride type is filtered.
+  - Tapping the `Sort: [Newest | Soonest | Most open] ▾` chip opens a `DropdownMenu` to select the sorting order, highlighting whenever a non-default order is selected.
+  - Verified on Pixel 7 emulator: inspected single-row layout, opened Ride dropdown menu, selected Auto, verified filter label updated and filtered lobbies; opened Sort dropdown menu, selected Soonest, and verified sorting order updated live.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

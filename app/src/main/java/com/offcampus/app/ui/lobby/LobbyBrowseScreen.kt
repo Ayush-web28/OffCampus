@@ -9,19 +9,23 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -39,7 +43,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -119,63 +125,122 @@ fun LobbyBrowseScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             )
 
-            // Horizontally scrollable, same as Post Trip's chip rows — without this, "Friends
-            // only" (the widest label of the four) had nowhere to go on a narrower phone once
-            // "All rides"/"Auto"/"Cab" already used up most of the row's width: Compose doesn't
-            // wrap or shrink Row children by default, so the chip's own text wrapped one or two
-            // characters per line instead, ballooning the chip's height to fit them. A FlowRow
-            // (wrapping to a second line instead of scrolling) was tried in between, but reverted
-            // back to this at request.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = filters.rideType == null,
-                    onClick = { viewModel.onRideTypeChange(null) },
-                    label = { Text("All rides") }
-                )
-                FilterChip(
-                    selected = filters.rideType == RideType.AUTO,
-                    onClick = { viewModel.onRideTypeChange(RideType.AUTO) },
-                    label = { Text("Auto") }
-                )
-                FilterChip(
-                    selected = filters.rideType == RideType.CAB,
-                    onClick = { viewModel.onRideTypeChange(RideType.CAB) },
-                    label = { Text("Cab") }
-                )
-                FilterChip(
-                    selected = filters.friendsOnly,
-                    onClick = { viewModel.onFriendsOnlyChange(!filters.friendsOnly) },
-                    label = { Text("Friends only") }
-                )
-            }
+            var rideTypeMenuExpanded by remember { mutableStateOf(false) }
+            var sortMenuExpanded by remember { mutableStateOf(false) }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Dropdown 1: Ride Type
+                Box {
+                    FilterChip(
+                        selected = filters.rideType != null,
+                        onClick = { rideTypeMenuExpanded = true },
+                        label = {
+                            Text(
+                                when (filters.rideType) {
+                                    null -> "Ride: All"
+                                    RideType.AUTO -> "Ride: Auto"
+                                    RideType.CAB -> "Ride: Cab"
+                                }
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Select ride type",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = rideTypeMenuExpanded,
+                        onDismissRequest = { rideTypeMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All rides") },
+                            onClick = {
+                                viewModel.onRideTypeChange(null)
+                                rideTypeMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Auto") },
+                            onClick = {
+                                viewModel.onRideTypeChange(RideType.AUTO)
+                                rideTypeMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cab") },
+                            onClick = {
+                                viewModel.onRideTypeChange(RideType.CAB)
+                                rideTypeMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+
+                // Dropdown 2: Sort
+                Box {
+                    FilterChip(
+                        selected = filters.sort != SortOption.NEWEST,
+                        onClick = { sortMenuExpanded = true },
+                        label = {
+                            Text(
+                                when (filters.sort) {
+                                    SortOption.NEWEST -> "Sort: Newest"
+                                    SortOption.SOONEST -> "Sort: Soonest"
+                                    SortOption.MOST_OPEN -> "Sort: Most open"
+                                }
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Select sort order",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Newest") },
+                            onClick = {
+                                viewModel.onSortChange(SortOption.NEWEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Soonest") },
+                            onClick = {
+                                viewModel.onSortChange(SortOption.SOONEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Most open") },
+                            onClick = {
+                                viewModel.onSortChange(SortOption.MOST_OPEN)
+                                sortMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+
+                // Toggle chip: Friends only
                 FilterChip(
-                    selected = filters.sort == SortOption.NEWEST,
-                    onClick = { viewModel.onSortChange(SortOption.NEWEST) },
-                    label = { Text("Newest") }
-                )
-                FilterChip(
-                    selected = filters.sort == SortOption.SOONEST,
-                    onClick = { viewModel.onSortChange(SortOption.SOONEST) },
-                    label = { Text("Soonest") }
-                )
-                FilterChip(
-                    selected = filters.sort == SortOption.MOST_OPEN,
-                    onClick = { viewModel.onSortChange(SortOption.MOST_OPEN) },
-                    label = { Text("Most open") }
+                    selected = filters.friendsOnly,
+                    onClick = { viewModel.onFriendsOnlyChange(!filters.friendsOnly) },
+                    label = { Text("Friends only") }
                 )
             }
 
