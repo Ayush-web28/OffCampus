@@ -29,11 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -60,9 +62,22 @@ fun LobbyBrowseScreen(
     val friendLobbyNotification by viewModel.friendLobbyNotification.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            viewModel.dismissFriendLobbyNotification()
+        }
+    }
+
     LaunchedEffect(friendLobbyNotification) {
         friendLobbyNotification?.let { notification ->
-            val result = snackbarHostState.showSnackbar(notification.message, actionLabel = "View")
+            val result = snackbarHostState.showSnackbar(
+                message = notification.message,
+                actionLabel = "View",
+                withDismissAction = true,
+                duration = SnackbarDuration.Short
+            )
             if (result == SnackbarResult.ActionPerformed) onOpenLobby(notification.lobbyId)
             viewModel.dismissFriendLobbyNotification()
         }
