@@ -25,6 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -41,6 +46,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -106,11 +112,81 @@ fun LobbyBrowseScreen(
     // for the whole time this screen stays composed — deliberately NOT reset by scroll.
     val animatedLobbyIds = remember { mutableStateMapOf<String, Boolean>() }
 
+    var showActiveLobbyAlert by remember { mutableStateOf(false) }
+
+    val hasActiveFilters = filters.destinationQuery.isNotBlank() ||
+        filters.rideType != null ||
+        filters.friendsOnly ||
+        filters.sort != SortOption.NEWEST
+
+    if (showActiveLobbyAlert && activeLobby != null) {
+        val active = activeLobby!!
+        val isMaster = active.createdBy == currentUserId
+        AlertDialog(
+            onDismissRequest = { showActiveLobbyAlert = false },
+            title = { Text("Active Lobby in Progress") },
+            text = {
+                Text(
+                    "You already have an active lobby to ${active.destination} (${if (isMaster) "as Lobby Master" else "as Rider"}).\n\n" +
+                    "You cannot create another lobby while one is in progress. What would you like to do?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showActiveLobbyAlert = false
+                        onOpenLobby(active.id)
+                    }
+                ) {
+                    Text("View active lobby")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showActiveLobbyAlert = false }) {
+                        Text("Dismiss")
+                    }
+                    if (isMaster) {
+                        TextButton(
+                            onClick = {
+                                showActiveLobbyAlert = false
+                                viewModel.cancelActiveLobby(active.id) {
+                                    onCreateLobby()
+                                }
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Cancel & post new", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                showActiveLobbyAlert = false
+                                viewModel.leaveActiveLobby(active.id) {
+                                    onCreateLobby()
+                                }
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Leave & post new", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onCreateLobby,
+                onClick = {
+                    if (activeLobby != null) {
+                        showActiveLobbyAlert = true
+                    } else {
+                        onCreateLobby()
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(16.dp)
@@ -209,6 +285,7 @@ fun LobbyBrowseScreen(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("All rides") },
+                                leadingIcon = if (filters.rideType == null) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onRideTypeChange(null)
                                     rideTypeMenuExpanded = false
@@ -216,6 +293,7 @@ fun LobbyBrowseScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Auto") },
+                                leadingIcon = if (filters.rideType == RideType.AUTO) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onRideTypeChange(RideType.AUTO)
                                     rideTypeMenuExpanded = false
@@ -223,6 +301,7 @@ fun LobbyBrowseScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Cab") },
+                                leadingIcon = if (filters.rideType == RideType.CAB) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onRideTypeChange(RideType.CAB)
                                     rideTypeMenuExpanded = false
@@ -260,6 +339,7 @@ fun LobbyBrowseScreen(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Newest") },
+                                leadingIcon = if (filters.sort == SortOption.NEWEST) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onSortChange(SortOption.NEWEST)
                                     sortMenuExpanded = false
@@ -267,6 +347,7 @@ fun LobbyBrowseScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Soonest") },
+                                leadingIcon = if (filters.sort == SortOption.SOONEST) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onSortChange(SortOption.SOONEST)
                                     sortMenuExpanded = false
@@ -274,6 +355,7 @@ fun LobbyBrowseScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Most open") },
+                                leadingIcon = if (filters.sort == SortOption.MOST_OPEN) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
                                 onClick = {
                                     viewModel.onSortChange(SortOption.MOST_OPEN)
                                     sortMenuExpanded = false
@@ -289,6 +371,23 @@ fun LobbyBrowseScreen(
                         shape = RoundedCornerShape(999.dp),
                         label = { Text("Friends only") }
                     )
+
+                    // Reset filters chip (shows when any filter or search is active)
+                    if (hasActiveFilters) {
+                        FilterChip(
+                            selected = false,
+                            onClick = viewModel::resetFilters,
+                            shape = RoundedCornerShape(999.dp),
+                            label = { Text("Reset") },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Reset filters",
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        )
+                    }
                 }
             }
 
@@ -316,17 +415,22 @@ fun LobbyBrowseScreen(
                 }
             }
 
-            if (lobbies.isEmpty() && activeLobby == null && pendingPayment == null) {
+            if (lobbies.isEmpty()) {
                 item(key = "empty_state") {
-                    EmptyLobbiesState(hasAnyLobbies = hasAnyLobbies)
+                    EmptyLobbiesState(
+                        hasActiveFilters = hasActiveFilters,
+                        hasActiveLobby = activeLobby != null,
+                        onResetFilters = viewModel::resetFilters
+                    )
                 }
             }
 
             items(lobbies, key = { it.id }) { lobby ->
                 val alreadyAnimated = animatedLobbyIds.containsKey(lobby.id)
-                val visibleState = remember { MutableTransitionState(alreadyAnimated) }
-                LaunchedEffect(Unit) {
-                    visibleState.targetState = true
+                val visibleState = remember(lobby.id) {
+                    MutableTransitionState(alreadyAnimated).apply { targetState = true }
+                }
+                LaunchedEffect(lobby.id) {
                     animatedLobbyIds[lobby.id] = true
                 }
                 AnimatedVisibility(
@@ -348,15 +452,34 @@ fun LobbyBrowseScreen(
 }
 
 @Composable
-private fun EmptyLobbiesState(hasAnyLobbies: Boolean) {
+private fun EmptyLobbiesState(
+    hasActiveFilters: Boolean,
+    hasActiveLobby: Boolean,
+    onResetFilters: () -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 40.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            if (hasAnyLobbies) "No lobbies match your filters." else "No lobbies yet — be the first to post one.",
+            text = when {
+                hasActiveFilters -> "No lobbies match your active filters."
+                hasActiveLobby -> "No other open lobbies right now."
+                else -> "No open lobbies yet — be the first to post one."
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (hasActiveFilters) {
+            OutlinedButton(
+                onClick = onResetFilters,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                Text("Reset filters")
+            }
+        }
     }
 }

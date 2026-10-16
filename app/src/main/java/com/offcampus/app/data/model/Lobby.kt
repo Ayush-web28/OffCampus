@@ -5,7 +5,7 @@ import com.google.firebase.firestore.Exclude
 
 enum class RideType { AUTO, CAB }
 
-enum class LobbyStatus { OPEN, LOCKED, COMPLETED }
+enum class LobbyStatus { OPEN, LOCKED, COMPLETED, CANCELLED }
 
 /** Mirrors a document in the top-level "lobbies" collection. */
 data class Lobby(

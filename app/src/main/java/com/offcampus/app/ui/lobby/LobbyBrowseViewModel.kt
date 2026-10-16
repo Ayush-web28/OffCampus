@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.PlaceSearchService
@@ -285,9 +286,9 @@ class LobbyBrowseViewModel : ViewModel() {
             filtered.filter { it.id != activeLobby?.id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val hasAnyLobbies: StateFlow<Boolean> = _lobbies
-        .combine(_filters) { lobbies, _ -> lobbies.isNotEmpty() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val hasAnyLobbies: StateFlow<Boolean> = combine(_lobbies, nowTicker) { lobbies, now ->
+        lobbies.any { !isStale(it, now) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** A lobby that's been sitting OPEN for more than [STALE_AFTER_MS] since it was created is
      * treated as abandoned — its own departure window has long passed and its master never
@@ -299,15 +300,16 @@ class LobbyBrowseViewModel : ViewModel() {
     private fun isStale(lobby: Lobby, nowMs: Long): Boolean =
         nowMs - lobby.createdAt.toDate().time > STALE_AFTER_MS
 
-    /** A lobby matches "Search destination" either the old way — its own destination text
-     * contains what was typed — or, new here, by being within [NEARBY_RADIUS_KM] of wherever
-     * that typed text actually resolves to. The second half only ever applies when both sides
-     * have real coordinates: a lobby whose creator never picked a suggestion (Fix 16) has none,
-     * and a query Photon can't place resolves to null — either way this just falls back to the
-     * plain text match, never a hard failure. */
+    /** A lobby matches "Search destination" if its destination, pickup gate, or checkpoint
+     * contains the typed text, or if it is within [NEARBY_RADIUS_KM] of wherever that query
+     * resolves to geographically. */
     private fun matchesDestination(lobby: Lobby, query: String, queryLocation: PlaceSuggestion?): Boolean {
-        if (query.isBlank()) return true
-        if (lobby.destination.contains(query, ignoreCase = true)) return true
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return true
+        if (lobby.destination.contains(trimmed, ignoreCase = true) ||
+            lobby.gate.contains(trimmed, ignoreCase = true) ||
+            lobby.checkpoint.contains(trimmed, ignoreCase = true)
+        ) return true
         val lat = lobby.destinationLat
         val lng = lobby.destinationLng
         if (lat == null || lng == null || queryLocation == null) return false
@@ -340,6 +342,32 @@ class LobbyBrowseViewModel : ViewModel() {
     fun onRideTypeChange(rideType: RideType?) = _filters.update { it.copy(rideType = rideType) }
     fun onFriendsOnlyChange(friendsOnly: Boolean) = _filters.update { it.copy(friendsOnly = friendsOnly) }
     fun onSortChange(sort: SortOption) = _filters.update { it.copy(sort = sort) }
+
+    fun resetFilters() {
+        _filters.value = LobbyFilters()
+        _queryLocation.value = null
+    }
+
+    /** Master can cancel an active lobby directly from browse before starting a new one. */
+    fun cancelActiveLobby(lobbyId: String, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("status", LobbyStatus.CANCELLED.name).await()
+                onDone()
+            } catch (_: Exception) {}
+        }
+    }
+
+    /** Member can leave an active lobby directly from browse before starting a new one. */
+    fun leaveActiveLobby(lobbyId: String, onDone: () -> Unit = {}) {
+        val id = currentUserId ?: return
+        viewModelScope.launch {
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayRemove(id)).await()
+                onDone()
+            } catch (_: Exception) {}
+        }
+    }
 
     override fun onCleared() {
         authListener?.let { Firebase.auth.removeAuthStateListener(it) }

@@ -176,6 +176,24 @@ class PostTripViewModel : ViewModel() {
         _formState.update { it.copy(isSubmitting = true, errorMessage = null) }
         viewModelScope.launch {
             try {
+                // Guard: Prevent posting if user already has an active lobby (OPEN or LOCKED)
+                val activeLobbies = FirebaseRefs.lobbies
+                    .whereArrayContains("memberIds", uid)
+                    .get().await()
+                    .documents
+                    .mapNotNull { doc -> doc.toObject(Lobby::class.java)?.copy(id = doc.id) }
+                    .filter { it.status == LobbyStatus.OPEN || it.status == LobbyStatus.LOCKED }
+
+                if (activeLobbies.isNotEmpty()) {
+                    _formState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = "You already have an active lobby. Please cancel or end it before posting a new one."
+                        )
+                    }
+                    return@launch
+                }
+
                 val lobby = Lobby(
                     checkpoint = form.checkpoint,
                     gate = form.gate,

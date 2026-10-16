@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Lock
@@ -249,19 +250,22 @@ fun LobbyDetailScreen(
             Crossfade(targetState = current.status, label = "lobbyStatus", modifier = Modifier.padding(top = 24.dp)) { status ->
                 val isMaster = viewModel.currentUid == current.createdBy
                 when {
+                    status == LobbyStatus.CANCELLED -> CancelledTripCard(onBack = onBack)
                     status == LobbyStatus.COMPLETED -> CompletedTripCard(onViewSplit = onOpenPaymentSplit)
                     // Booking the ride and ending it (splitting the fare) are the lobby master's
                     // calls to make — everyone else just waits for that to happen, same as they
                     // can't lock the lobby in the first place.
                     status == LobbyStatus.LOCKED && isMaster -> LockedRideBookingCard(
                         destination = current.destination,
-                        onSplitFare = onOpenPostFare
+                        onSplitFare = onOpenPostFare,
+                        onCancelLobby = { viewModel.cancelLobby(onBack) }
                     )
                     status == LobbyStatus.LOCKED -> LockedRideInProgressCard()
                     isMaster -> LobbyMasterControls(
                         canLock = current.memberIds.isNotEmpty(),
                         isUpdating = isUpdating,
-                        onLock = viewModel::lock
+                        onLock = viewModel::lock,
+                        onCancel = { viewModel.cancelLobby(onBack) }
                     )
                     viewModel.currentUid in current.memberIds -> OutlinedButton(
                         onClick = viewModel::leave,
@@ -400,13 +404,44 @@ private fun JoinLobbyButton(isUpdating: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LobbyMasterControls(canLock: Boolean, isUpdating: Boolean, onLock: () -> Unit) {
-    Column {
+private fun LobbyMasterControls(
+    canLock: Boolean,
+    isUpdating: Boolean,
+    onLock: () -> Unit,
+    onCancel: () -> Unit
+) {
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel lobby?") },
+            text = { Text("Are you sure you want to cancel this lobby? This will close the lobby for all riders.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCancelDialog = false
+                        onCancel()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cancel lobby", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text("Keep lobby")
+                }
+            }
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "You're the lobby master — lock it once everyone's in.",
+            "You're the lobby master — lock it once everyone's in, or cancel if plans change.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
         Button(
             onClick = onLock,
@@ -420,12 +455,53 @@ private fun LobbyMasterControls(canLock: Boolean, isUpdating: Boolean, onLock: (
                 .fillMaxWidth()
                 .height(48.dp)
         ) { Text("Lock lobby", fontWeight = FontWeight.Bold) }
+
+        OutlinedButton(
+            onClick = { showCancelDialog = true },
+            enabled = !isUpdating,
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) { Text("Cancel lobby", fontWeight = FontWeight.SemiBold) }
     }
 }
 
 @Composable
-private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) {
+private fun LockedRideBookingCard(
+    destination: String,
+    onSplitFare: () -> Unit,
+    onCancelLobby: () -> Unit
+) {
     val context = LocalContext.current
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel ride & lobby?") },
+            text = { Text("If this ride didn't happen or was cancelled, ending the lobby will close it for everyone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCancelDialog = false
+                        onCancelLobby()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("End & cancel lobby", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text("Keep active")
+                }
+            }
+        )
+    }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -455,6 +531,62 @@ private fun LockedRideBookingCard(destination: String, onSplitFare: () -> Unit) 
                     .padding(top = 8.dp)
             ) {
                 Text("Ride's done — split the fare", fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+                onClick = { showCancelDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .padding(top = 8.dp)
+            ) {
+                Text("Cancel ride / End lobby", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CancelledTripCard(onBack: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cancel,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(44.dp)
+            )
+            Text(
+                "This lobby was cancelled",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+            Text(
+                "The lobby master cancelled this trip before the ride finished.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp, bottom = 18.dp)
+            )
+            Button(
+                onClick = onBack,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Back to lobbies", fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -87,7 +87,7 @@ service cloud.firestore {
       // Each helper below matches exactly one mutation LobbyDetailViewModel or
       // PostFareViewModel actually performs — nothing else is a legal lobby update.
       allow update: if isSignedIn() && (
-        isJoiningLobby() || isLeavingLobby() || isRemovingRider() || isLockingLobby() || isCompletingLobby()
+        isJoiningLobby() || isLeavingLobby() || isRemovingRider() || isLockingLobby() || isCompletingLobby() || isCancellingLobby()
       );
 
       allow delete: if false; // no delete flow exists in the app
@@ -137,6 +137,14 @@ service cloud.firestore {
       return onlyFieldChanged('status')
         && resource.data.status == 'LOCKED'
         && request.resource.data.status == 'COMPLETED'
+        && request.auth.uid == resource.data.createdBy;
+    }
+
+    // Lobby master can cancel an OPEN or LOCKED lobby before the ride finishes
+    function isCancellingLobby() {
+      return onlyFieldChanged('status')
+        && resource.data.status in ['OPEN', 'LOCKED']
+        && request.resource.data.status == 'CANCELLED'
         && request.auth.uid == resource.data.createdBy;
     }
 

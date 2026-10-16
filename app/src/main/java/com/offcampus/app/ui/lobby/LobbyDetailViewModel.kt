@@ -115,6 +115,24 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         }
     }
 
+    /** Master can cancel the lobby before the ride is finished (while OPEN or LOCKED). */
+    fun cancelLobby(onSuccess: () -> Unit = {}) {
+        val uid = currentUid ?: return
+        val currentLobby = _lobby.value ?: return
+        if (currentLobby.createdBy != uid) return
+        viewModelScope.launch {
+            _isUpdating.value = true
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("status", LobbyStatus.CANCELLED.name).await()
+                onSuccess()
+            } catch (e: Exception) {
+                // Safe catch prevents crash
+            } finally {
+                _isUpdating.value = false
+            }
+        }
+    }
+
     override fun onCleared() {
         listener?.remove()
     }

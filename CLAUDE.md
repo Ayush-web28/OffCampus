@@ -241,6 +241,15 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Fixed Button modifier ordering to apply top margin padding before height and width constraints, ensuring the 52dp stadium pill CTA retains full visual height without content squeezing.
   - Verified on Pixel 7 emulator (`emulator-5554`) with screenshots (`emu_posttrip_now.png`, `emu_posttrip_cab_now.png`).
 
+- **Fix 40 — Add active lobby cancellation, multi-lobby creation guard, and fix browse filter accuracy** (bug fix & lifecycle improvement: resolved lobby visibility, filter UX, active lobby lifecycle, and multi-lobby duplication across accounts).
+  - Added `CANCELLED` status to `LobbyStatus` enum and updated `firestore.rules` with `isCancellingLobby()` allowing the lobby master to cancel `OPEN` or `LOCKED` lobbies before trip completion (deployed live to Firebase).
+  - Added "Cancel lobby" and "Cancel ride / End lobby" action buttons with confirmation dialogs in `LobbyDetailScreen.kt` for lobby masters (`OPEN` and `LOCKED` states), plus a `CancelledTripCard` state when a lobby is cancelled.
+  - Guarded the FAB in `LobbyBrowseScreen.kt` against multi-lobby creation when an active lobby already exists, displaying an `AlertDialog` offering "View active lobby" or "Cancel / Leave & post new".
+  - Added an active lobby check in `PostTripViewModel.submit()` preventing duplicate active lobbies from being created.
+  - Fixed false "No lobbies match your filters" empty state in `LobbyBrowseViewModel.kt` by evaluating non-stale lobbies rather than raw collection size containing months-old documents.
+  - Broadened destination search to check destination, pickup gate, and checkpoint text.
+  - Added leading checkmark indicators to Ride Type and Sort dropdown menu items, and added an active filter "Reset" chip.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
