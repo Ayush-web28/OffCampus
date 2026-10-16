@@ -15,6 +15,7 @@ object Routes {
     const val TRIP_HISTORY = "tripHistory"
     const val REPORT_PATTERN = "report/{lobbyId}/{reportedUserId}"
     const val RATE_PATTERN = "rate/{lobbyId}/{ratedUserId}"
+    const val USER_PROFILE_PATTERN = "userProfile/{userId}"
 
     fun lobbyDetail(lobbyId: String) = "lobbyDetail/$lobbyId"
     fun lobbyChat(lobbyId: String) = "lobbyChat/$lobbyId"
@@ -23,4 +24,5 @@ object Routes {
     fun paymentSplit(lobbyId: String) = "paymentSplit/$lobbyId"
     fun report(lobbyId: String, reportedUserId: String) = "report/$lobbyId/$reportedUserId"
     fun rate(lobbyId: String, ratedUserId: String) = "rate/$lobbyId/$ratedUserId"
+    fun userProfile(userId: String) = "userProfile/$userId"
 }

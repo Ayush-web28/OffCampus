@@ -33,6 +33,7 @@ import com.offcampus.app.ui.payment.PostFareScreen
 import com.offcampus.app.ui.payment.TripHistoryScreen
 import com.offcampus.app.ui.profile.AvatarPickerScreen
 import com.offcampus.app.ui.profile.ProfileScreen
+import com.offcampus.app.ui.profile.UserProfileScreen
 import com.offcampus.app.ui.rating.RateRiderScreen
 import com.offcampus.app.ui.report.ReportScreen
 
@@ -265,6 +266,19 @@ fun OffCampusNavHost() {
                 val friendId = entry.arguments?.getString("friendId")
                 if (friendId != null) {
                     FriendChatScreen(friendId = friendId, onBack = { navController.popBackStack() })
+                }
+            }
+
+            composable(
+                route = Routes.USER_PROFILE_PATTERN,
+                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            ) { entry ->
+                val userId = entry.arguments?.getString("userId")
+                if (userId != null) {
+                    UserProfileScreen(
+                        userId = userId,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
         }
