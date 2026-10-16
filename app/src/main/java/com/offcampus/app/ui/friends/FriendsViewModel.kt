@@ -54,6 +54,7 @@ class FriendsViewModel : ViewModel() {
     private var incomingListener: ListenerRegistration? = null
     private var authListener: FirebaseAuth.AuthStateListener? = null
     private var searchJob: Job? = null
+    private var messageDismissJob: Job? = null
 
     init {
         // Reacts to WHO is signed in, not just whether someone is — see observeSignedInUid's own
@@ -192,13 +193,25 @@ class FriendsViewModel : ViewModel() {
                     FriendRequest(fromUserId = myId, toUserId = target.id, status = FriendRequestStatus.PENDING)
                 ).await()
                 _addFriendState.value = AddFriendState(successMessage = "Friend request sent to ${target.name}.")
+                scheduleMessageDismiss()
             } catch (e: Exception) {
                 fail(e.localizedMessage ?: "Couldn't send that request. Try again.")
             }
         }
     }
 
-    private fun fail(message: String) = _addFriendState.update { it.copy(isSubmitting = false, errorMessage = message) }
+    private fun fail(message: String) {
+        _addFriendState.update { it.copy(isSubmitting = false, errorMessage = message) }
+        scheduleMessageDismiss()
+    }
+
+    private fun scheduleMessageDismiss() {
+        messageDismissJob?.cancel()
+        messageDismissJob = viewModelScope.launch {
+            delay(2000L)
+            _addFriendState.update { it.copy(successMessage = null, errorMessage = null) }
+        }
+    }
 
     fun accept(incoming: IncomingRequest) {
         val myId = uid ?: return
@@ -233,5 +246,6 @@ class FriendsViewModel : ViewModel() {
         authListener?.let { Firebase.auth.removeAuthStateListener(it) }
         riderListener?.remove()
         incomingListener?.remove()
+        messageDismissJob?.cancel()
     }
 }
