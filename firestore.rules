@@ -21,10 +21,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == riderId;
 
-      // A rider can freely edit their own profile. Two deliberate exceptions, both narrow
+      // A rider can freely edit their own profile. Three deliberate exceptions, all narrow
       // carve-outs rather than opening riders up generally:
       allow update: if isSignedIn() && (
-        request.auth.uid == riderId || isAddingSelfToFriendIds(riderId) || isRatingUpdate(riderId)
+        request.auth.uid == riderId || isAddingSelfToFriendIds(riderId) || isRemovingSelfFromFriendIds(riderId) || isRatingUpdate(riderId)
       );
       allow delete: if false;
 
@@ -47,6 +47,16 @@ service cloud.firestore {
     function isAddingSelfToFriendIds(riderId) {
       return onlyFieldChanged('friendIds')
         && request.resource.data.friendIds == resource.data.friendIds.concat([request.auth.uid])
+        && request.auth.uid != riderId;
+    }
+
+    // Unfriend / Block removes the actor's own uid from the other rider's friendIds.
+    function isRemovingSelfFromFriendIds(riderId) {
+      return onlyFieldChanged('friendIds')
+        && !request.resource.data.friendIds.hasAny([request.auth.uid])
+        && resource.data.friendIds.hasAny([request.auth.uid])
+        && resource.data.friendIds.hasAll(request.resource.data.friendIds)
+        && request.resource.data.friendIds.size() == resource.data.friendIds.size() - 1
         && request.auth.uid != riderId;
     }
 

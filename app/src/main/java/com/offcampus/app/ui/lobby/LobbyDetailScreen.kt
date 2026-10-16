@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -70,7 +71,8 @@ fun LobbyDetailScreen(
     onBack: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenPostFare: () -> Unit,
-    onOpenPaymentSplit: () -> Unit
+    onOpenPaymentSplit: () -> Unit,
+    onOpenProfile: (String) -> Unit = {}
 ) {
     val viewModel: LobbyDetailViewModel = viewModel(
         factory = viewModelFactory { initializer { LobbyDetailViewModel(lobbyId) } }
@@ -239,6 +241,7 @@ fun LobbyDetailScreen(
                             member = member,
                             isMaster = isThisMemberMaster,
                             canRemove = canRemove,
+                            onOpenProfile = { onOpenProfile(member.id) },
                             onRemove = { riderToRemove = member }
                         )
                     }
@@ -323,6 +326,7 @@ private fun MemberRow(
     member: Rider,
     isMaster: Boolean,
     canRemove: Boolean = false,
+    onOpenProfile: () -> Unit = {},
     onRemove: () -> Unit = {}
 ) {
     Row(
@@ -331,24 +335,30 @@ private fun MemberRow(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = member.avatarId, photoUrl = member.photoUrl, photoBase64 = member.photoBase64, size = 36.dp)
-        Column(modifier = Modifier.padding(start = 12.dp)) {
-            Text(
-                member.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (isMaster) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onOpenProfile),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarView(avatarId = member.avatarId, photoUrl = member.photoUrl, photoBase64 = member.photoBase64, size = 36.dp)
+            Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(
-                    "Lobby Host",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
+                    member.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
+                if (isMaster) {
+                    Text(
+                        "Lobby Host",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
         if (canRemove) {
-            Spacer(modifier = Modifier.weight(1f))
             TextButton(
                 onClick = onRemove,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)

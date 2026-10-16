@@ -150,12 +150,14 @@ class FriendsViewModel : ViewModel() {
             val byEmail = FirebaseRefs.riders.orderBy("email").startAt(start).endAt(end)
                 .limit(10).get().await()
 
+            val myRiderDoc = if (myId != null) FirebaseRefs.riders.document(myId).get().await() else null
+            val blockedIds = myRiderDoc?.toObject(Rider::class.java)?.blockedUserIds?.toSet() ?: emptySet()
             val myFriendIds = _friends.value.map { it.id }.toSet()
             val results = (byName.documents + byEmail.documents)
                 .distinctBy { it.id }
                 .mapNotNull { doc -> doc.toObject(Rider::class.java)?.copy(id = doc.id) }
-                // Nothing useful about suggesting yourself or someone you're already friends with.
-                .filter { it.id != myId && it.id !in myFriendIds }
+                // Exclude yourself, existing friends, users you blocked, and users who blocked you.
+                .filter { it.id != myId && it.id !in myFriendIds && it.id !in blockedIds && (myId == null || myId !in it.blockedUserIds) }
                 .take(10)
 
             _addFriendState.update { it.copy(searchResults = results) }

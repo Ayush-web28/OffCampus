@@ -142,7 +142,8 @@ fun OffCampusNavHost() {
             composable(Routes.FRIENDS) {
                 FriendsScreen(
                     viewModel = friendsViewModel,
-                    onOpenChat = { friendId -> navController.navigate(Routes.friendChat(friendId)) }
+                    onOpenChat = { friendId -> navController.navigate(Routes.friendChat(friendId)) },
+                    onOpenProfile = { userId -> navController.navigate(Routes.userProfile(userId)) }
                 )
             }
 
@@ -172,7 +173,8 @@ fun OffCampusNavHost() {
                         onBack = { navController.popBackStack() },
                         onOpenChat = { navController.navigate(Routes.lobbyChat(lobbyId)) },
                         onOpenPostFare = { navController.navigate(Routes.postFare(lobbyId)) },
-                        onOpenPaymentSplit = { navController.navigate(Routes.paymentSplit(lobbyId)) }
+                        onOpenPaymentSplit = { navController.navigate(Routes.paymentSplit(lobbyId)) },
+                        onOpenProfile = { userId -> navController.navigate(Routes.userProfile(userId)) }
                     )
                 }
             }

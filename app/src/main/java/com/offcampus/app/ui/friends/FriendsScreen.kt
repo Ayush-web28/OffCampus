@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import com.offcampus.app.ui.avatar.AvatarView
 @Composable
 fun FriendsScreen(
     onOpenChat: (String) -> Unit,
+    onOpenProfile: (String) -> Unit,
     viewModel: FriendsViewModel = viewModel()
 ) {
     val friends by viewModel.friends.collectAsStateWithLifecycle()
@@ -126,11 +128,13 @@ fun FriendsScreen(
             }
         }
 
-        // Tapping a suggestion sends the request directly — typing a name or email down to an
-        // exact match is no longer needed, the same way Instagram's search lets you tap a
-        // result instead of typing a full handle.
+        // Tapping avatar/name opens public profile; tapping "Add" sends friend request directly.
         items(addFriendState.searchResults, key = { "search_${it.id}" }) { result ->
-            SearchResultRow(rider = result, onClick = { viewModel.sendRequestTo(result) })
+            SearchResultRow(
+                rider = result,
+                onOpenProfile = { onOpenProfile(result.id) },
+                onAdd = { viewModel.sendRequestTo(result) }
+            )
         }
 
         item {
@@ -144,12 +148,10 @@ fun FriendsScreen(
         }
 
         items(incoming, key = { it.request.id }) { incomingRequest ->
-            // animateItem() gives this a real slide/fade-out (Compose Foundation's own item
-            // removal animation) once the accepted/declined request actually drops out of the
-            // live `incoming` list, instead of the row just vanishing on the next recompose.
             Column(modifier = Modifier.animateItem()) {
                 IncomingRequestRow(
                     incomingRequest = incomingRequest,
+                    onOpenProfile = { onOpenProfile(incomingRequest.fromRider.id) },
                     onAccept = { viewModel.accept(incomingRequest) },
                     onDecline = { viewModel.decline(incomingRequest) }
                 )
@@ -173,54 +175,81 @@ fun FriendsScreen(
         }
 
         items(friends, key = { it.id }) { friend ->
-            FriendRow(friend = friend, onOpenChat = { onOpenChat(friend.id) })
+            FriendRow(
+                friend = friend,
+                onOpenProfile = { onOpenProfile(friend.id) },
+                onOpenChat = { onOpenChat(friend.id) }
+            )
         }
     }
 }
 
 @Composable
-private fun SearchResultRow(rider: Rider, onClick: () -> Unit) {
+private fun SearchResultRow(
+    rider: Rider,
+    onOpenProfile: () -> Unit,
+    onAdd: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = rider.avatarId, photoUrl = rider.photoUrl, photoBase64 = rider.photoBase64, size = 40.dp)
-        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(rider.name, style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onOpenProfile),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarView(avatarId = rider.avatarId, photoUrl = rider.photoUrl, photoBase64 = rider.photoBase64, size = 40.dp)
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(rider.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    rider.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        TextButton(onClick = onAdd) {
             Text(
-                rider.email,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                "Add",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge
             )
         }
-        Text(
-            "Add",
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }
 
 @Composable
 private fun IncomingRequestRow(
     incomingRequest: IncomingRequest,
+    onOpenProfile: () -> Unit,
     onAccept: () -> Unit,
     onDecline: () -> Unit
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        AvatarView(
-            avatarId = incomingRequest.fromRider.avatarId,
-            photoUrl = incomingRequest.fromRider.photoUrl,
-            photoBase64 = incomingRequest.fromRider.photoBase64,
-            size = 44.dp
-        )
-        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text(incomingRequest.fromRider.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                "wants to be friends",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onOpenProfile),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarView(
+                avatarId = incomingRequest.fromRider.avatarId,
+                photoUrl = incomingRequest.fromRider.photoUrl,
+                photoBase64 = incomingRequest.fromRider.photoBase64,
+                size = 44.dp
             )
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(incomingRequest.fromRider.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "wants to be friends",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         OutlinedButton(onClick = onDecline) { Text("Decline") }
         Button(onClick = onAccept, modifier = Modifier.padding(start = 8.dp)) { Text("Accept") }
@@ -228,19 +257,32 @@ private fun IncomingRequestRow(
 }
 
 @Composable
-private fun FriendRow(friend: Rider, onOpenChat: () -> Unit) {
+private fun FriendRow(
+    friend: Rider,
+    onOpenProfile: () -> Unit,
+    onOpenChat: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AvatarView(avatarId = friend.avatarId, photoUrl = friend.photoUrl, photoBase64 = friend.photoBase64, size = 44.dp)
-        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(friend.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                friend.email,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onOpenProfile),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarView(avatarId = friend.avatarId, photoUrl = friend.photoUrl, photoBase64 = friend.photoBase64, size = 44.dp)
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(friend.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    friend.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         OutlinedButton(onClick = onOpenChat) { Text("Chat") }
     }
