@@ -17,6 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.offcampus.app.ui.auth.AuthScreen
 import com.offcampus.app.ui.auth.AuthUiState
 import com.offcampus.app.ui.auth.AuthViewModel
@@ -123,6 +125,19 @@ fun OffCampusNavHost() {
             startDestination = Routes.AUTH,
             modifier = Modifier.padding(innerPadding)
         ) {
+            val openRiderProfile: (String) -> Unit = { targetUserId ->
+                val myUid = Firebase.auth.currentUser?.uid
+                if (targetUserId == myUid) {
+                    navController.navigate(Routes.PROFILE) {
+                        popUpTo(Routes.LOBBIES) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                } else {
+                    navController.navigate(Routes.userProfile(targetUserId))
+                }
+            }
+
             composable(Routes.AUTH) { AuthScreen(authViewModel) }
 
             composable(Routes.AVATAR_PICKER) {
@@ -143,7 +158,7 @@ fun OffCampusNavHost() {
                 FriendsScreen(
                     viewModel = friendsViewModel,
                     onOpenChat = { friendId -> navController.navigate(Routes.friendChat(friendId)) },
-                    onOpenProfile = { userId -> navController.navigate(Routes.userProfile(userId)) }
+                    onOpenProfile = openRiderProfile
                 )
             }
 
@@ -174,7 +189,7 @@ fun OffCampusNavHost() {
                         onOpenChat = { navController.navigate(Routes.lobbyChat(lobbyId)) },
                         onOpenPostFare = { navController.navigate(Routes.postFare(lobbyId)) },
                         onOpenPaymentSplit = { navController.navigate(Routes.paymentSplit(lobbyId)) },
-                        onOpenProfile = { userId -> navController.navigate(Routes.userProfile(userId)) }
+                        onOpenProfile = openRiderProfile
                     )
                 }
             }
@@ -279,7 +294,14 @@ fun OffCampusNavHost() {
                 if (userId != null) {
                     UserProfileScreen(
                         userId = userId,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onOpenMyProfile = {
+                            navController.navigate(Routes.PROFILE) {
+                                popUpTo(Routes.LOBBIES) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
                 }
             }

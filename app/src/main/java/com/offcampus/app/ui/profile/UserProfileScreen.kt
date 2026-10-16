@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ import com.offcampus.app.ui.avatar.AvatarView
 fun UserProfileScreen(
     userId: String,
     onBack: () -> Unit,
+    onOpenMyProfile: () -> Unit = {},
     viewModel: UserProfileViewModel = viewModel(
         factory = viewModelFactory { initializer { UserProfileViewModel(userId) } }
     )
@@ -74,6 +76,12 @@ fun UserProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showUnfriendDialog by remember { mutableStateOf(false) }
     var showBlockDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.relationshipStatus) {
+        if (uiState.relationshipStatus == UserRelationshipStatus.SELF) {
+            onOpenMyProfile()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -335,18 +343,6 @@ fun UserProfileScreen(
 
                     when (uiState.relationshipStatus) {
                         UserRelationshipStatus.SELF -> {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "This is how other riders see your public profile.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
                         }
 
                         UserRelationshipStatus.FRIENDS -> {
