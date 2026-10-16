@@ -1,6 +1,5 @@
 package com.offcampus.app.ui.lobby
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
@@ -400,15 +399,16 @@ private fun JoinLobbyButton(isUpdating: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(48.dp)
     ) {
-        AnimatedContent(targetState = tapped, label = "joinButtonContent") { joined ->
-            if (joined) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("Joined", fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
-                }
-            } else {
-                Text("Join lobby", fontWeight = FontWeight.Bold)
+        if (tapped) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Text("Joined", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(start = 6.dp))
             }
+        } else {
+            Text("Join lobby", fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
