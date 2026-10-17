@@ -9,12 +9,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.offcampus.app.data.NotificationService
+import com.offcampus.app.data.ThemeMode
+import com.offcampus.app.data.ThemePreferences
 import com.offcampus.app.ui.auth.AuthViewModel
 import com.offcampus.app.ui.navigation.OffCampusNavHost
 import com.offcampus.app.ui.theme.OffCampusTheme
@@ -35,7 +40,13 @@ class MainActivity : ComponentActivity() {
         NotificationService.registerDeviceToken()
 
         setContent {
-            OffCampusTheme {
+            val themeMode by ThemePreferences.themeMode.collectAsStateWithLifecycle()
+            val isDark = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            OffCampusTheme(darkTheme = isDark) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -16,6 +16,7 @@ class OffCampusApp : Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
+        com.offcampus.app.data.ThemePreferences.init(this)
         registerActivityLifecycleCallbacks(this)
     }
 

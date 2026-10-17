@@ -370,6 +370,16 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * Redesigned the "Leave lobby" button in `LobbyDetailScreen.kt` with high-contrast red error styling (1.5dp red border, error-tinted background, and bold red text).
     * Added a protective confirmation dialog (`"Leave lobby?"`) to prevent accidental seat forfeiture.
 
+- **Fix 60 — In-app Light/Dark mode switcher and Instagram-style Blocked Accounts manager in Profile** (Feature enhancement):
+  - **Light/Dark Mode Theme Switcher**:
+    * Created `ThemePreferences` helper to persist and observe `ThemeMode` (`LIGHT`, `DARK`, `SYSTEM`) via `StateFlow` and `SharedPreferences`.
+    * Initialized in `OffCampusApp` and connected to `MainActivity.kt`'s `OffCampusTheme`.
+    * Added an interactive Dark Mode toggle switch card under Account Settings in `ProfileScreen.kt`, enabling instant dynamic theme switching.
+  - **Blocked Accounts Management (Instagram-Style)**:
+    * In `ProfileViewModel`, added live observation of `blockedRiders` (resolving rider profiles via Firestore batching) and an `unblockUser(blockedUserId)` function removing the ID from `blockedUserIds`.
+    * In `ProfileScreen.kt`, added a "Blocked accounts" action that opens an Instagram-like modal dialog displaying avatars, names, emails, and an "Unblock" button with instant reactive updates.
+
+
 
 
 ## Working method — phased, not linear

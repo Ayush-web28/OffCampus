@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.PhotoService
@@ -22,6 +24,12 @@ class ProfileViewModel : ViewModel() {
     private val _rider = MutableStateFlow<Rider?>(null)
     val rider: StateFlow<Rider?> = _rider.asStateFlow()
 
+    private val _blockedRiders = MutableStateFlow<List<Rider>>(emptyList())
+    val blockedRiders: StateFlow<List<Rider>> = _blockedRiders.asStateFlow()
+
+    private val _isUnblocking = MutableStateFlow(false)
+    val isUnblocking: StateFlow<Boolean> = _isUnblocking.asStateFlow()
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
@@ -37,11 +45,59 @@ class ProfileViewModel : ViewModel() {
     private fun attachListener(id: String?) {
         listener?.remove()
         _rider.value = null
+        _blockedRiders.value = emptyList()
         if (id == null) return
         // A live listener, not a one-shot get() — avatar/rating changes show up immediately,
         // the same real-time pattern Phase 3's lobby list reuses for live seat counts.
         listener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-            _rider.value = snapshot?.toObject(Rider::class.java)?.copy(id = snapshot.id)
+            val r = snapshot?.toObject(Rider::class.java)?.copy(id = snapshot.id)
+            _rider.value = r
+            loadBlockedRiders(r?.blockedUserIds ?: emptyList())
+        }
+    }
+
+    private fun loadBlockedRiders(blockedIds: List<String>) {
+        if (blockedIds.isEmpty()) {
+            _blockedRiders.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val list = mutableListOf<Rider>()
+                for (chunk in blockedIds.chunked(30)) {
+                    val snapshot = FirebaseRefs.riders
+                        .whereIn(FieldPath.documentId(), chunk)
+                        .get().await()
+                    list.addAll(snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Rider::class.java)?.copy(id = doc.id)
+                    })
+                }
+                _blockedRiders.value = list
+            } catch (_: Exception) {
+                val list = mutableListOf<Rider>()
+                for (bId in blockedIds) {
+                    try {
+                        val doc = FirebaseRefs.riders.document(bId).get().await()
+                        doc.toObject(Rider::class.java)?.copy(id = doc.id)?.let { list.add(it) }
+                    } catch (_: Exception) {}
+                }
+                _blockedRiders.value = list
+            }
+        }
+    }
+
+    fun unblockUser(blockedUserId: String) {
+        val id = uid ?: return
+        viewModelScope.launch {
+            _isUnblocking.value = true
+            try {
+                FirebaseRefs.riders.document(id)
+                    .update("blockedUserIds", FieldValue.arrayRemove(blockedUserId)).await()
+                _blockedRiders.value = _blockedRiders.value.filter { it.id != blockedUserId }
+            } catch (_: Exception) {
+            } finally {
+                _isUnblocking.value = false
+            }
         }
     }
 
