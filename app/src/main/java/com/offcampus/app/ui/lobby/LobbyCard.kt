@@ -17,10 +17,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -174,8 +178,10 @@ private fun SeatDots(filled: Int, total: Int, modifier: Modifier = Modifier) {
 fun ActiveRideCard(
     lobby: Lobby,
     isMaster: Boolean,
-    hasUnreadChat: Boolean = false,
     onClick: () -> Unit,
+    hasUnreadChat: Boolean = false,
+    unreadChatCount: Int = 0,
+    onOpenChat: () -> Unit = onClick,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -327,23 +333,41 @@ fun ActiveRideCard(
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    Surface(
+                        onClick = onOpenChat,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
-                        Text(
-                            text = "Open lobby",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (hasUnreadChat || unreadChatCount > 0) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.error
+                                        ) {
+                                            if (unreadChatCount > 0) {
+                                                Text(
+                                                    text = if (unreadChatCount > 9) "9+" else "$unreadChatCount",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Forum,
+                                    contentDescription = "Open lobby chat",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

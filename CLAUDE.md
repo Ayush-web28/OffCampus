@@ -280,6 +280,12 @@ A **real bug** did surface, though, the first time this was tested against an ac
     3. User when removed from a lobby (`LobbyDetailViewModel.kt`), when receiving a new friend request (`FriendsViewModel.kt`, `UserProfileViewModel.kt`), or when blocked (`UserProfileViewModel.kt`).
     4. Chat notifications for group lobby chat and 1:1 friend chat (`ChatViewModel.kt`).
 
+- **Fix 48 — Badged chat icon button on active lobby card and unread indicators for friend chats** (UI/UX enhancement):
+  - Replaced `"Open lobby →"` text on `ActiveRideCard` with a dedicated badged chat icon button styled with `Icons.Rounded.Forum` (matching user's dual speech bubble reference). Tapping the card opens the lobby detail view, while tapping the chat icon button opens the lobby chat directly.
+  - Upgraded `UnreadActivityViewModel.kt` to calculate and expose exact unread message counts per chat (`unreadCounts: StateFlow<Map<String, Int>>`) in addition to `unreadChatIds`.
+  - Added badged indicators to `ActiveRideCard`'s chat icon showing unread message count (or red dot) when the active lobby has unread chat messages.
+  - Added badged indicators to `FriendRow` in `FriendsScreen.kt`: the "Chat" button displays the chat icon and a red badge showing the unread message count or presence dot from that specific friend.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

@@ -58,6 +58,7 @@ fun OffCampusNavHost() {
     // re-deriving it (and re-opening the same Firestore listeners) independently.
     val unreadActivityViewModel: UnreadActivityViewModel = viewModel()
     val unreadChatIds by unreadActivityViewModel.unreadChatIds.collectAsStateWithLifecycle()
+    val unreadCounts by unreadActivityViewModel.unreadCounts.collectAsStateWithLifecycle()
     val navController = rememberNavController()
 
     // Global, not screen-scoped like the friend-lobby Snackbar: "you owe money" is relevant no
@@ -148,15 +149,19 @@ fun OffCampusNavHost() {
                 LobbyBrowseScreen(
                     onCreateLobby = { navController.navigate(Routes.POST_TRIP) },
                     onOpenLobby = { lobbyId -> navController.navigate(Routes.lobbyDetail(lobbyId)) },
+                    onOpenLobbyChat = { lobbyId -> navController.navigate(Routes.lobbyChat(lobbyId)) },
                     onOpenTripHistory = { navController.navigate(Routes.TRIP_HISTORY) },
                     onOpenPaymentSplit = { lobbyId -> navController.navigate(Routes.paymentSplit(lobbyId)) },
-                    unreadChatIds = unreadChatIds
+                    unreadChatIds = unreadChatIds,
+                    unreadCounts = unreadCounts
                 )
             }
 
             composable(Routes.FRIENDS) {
                 FriendsScreen(
                     viewModel = friendsViewModel,
+                    unreadChatIds = unreadChatIds,
+                    unreadCounts = unreadCounts,
                     onOpenChat = { friendId -> navController.navigate(Routes.friendChat(friendId)) },
                     onOpenProfile = openRiderProfile
                 )

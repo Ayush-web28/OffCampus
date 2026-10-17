@@ -29,6 +29,9 @@ class UnreadActivityViewModel : ViewModel() {
     private val _unreadChatIds = MutableStateFlow<Set<String>>(emptySet())
     val unreadChatIds: StateFlow<Set<String>> = _unreadChatIds.asStateFlow()
 
+    private val _unreadCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val unreadCounts: StateFlow<Map<String, Int>> = _unreadCounts.asStateFlow()
+
     private var riderListener: ListenerRegistration? = null
     private var lobbiesListener: ListenerRegistration? = null
     private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -53,6 +56,7 @@ class UnreadActivityViewModel : ViewModel() {
         lastFriendChatIds = emptyList()
         lastLobbyChatIds = emptyList()
         _unreadChatIds.value = emptySet()
+        _unreadCounts.value = emptyMap()
         if (id == null) return
 
         riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
@@ -87,7 +91,17 @@ class UnreadActivityViewModel : ViewModel() {
     }
 
     private fun recomputeUnread() {
-        _unreadChatIds.value = chatWatchers.filterValues { it.isUnread() }.keys
+        val counts = mutableMapOf<String, Int>()
+        val unreadIds = mutableSetOf<String>()
+        for ((chatId, watcher) in chatWatchers) {
+            val count = watcher.unreadCount()
+            if (count > 0) {
+                counts[chatId] = count
+                unreadIds.add(chatId)
+            }
+        }
+        _unreadCounts.value = counts
+        _unreadChatIds.value = unreadIds
     }
 
     override fun onCleared() {
@@ -98,17 +112,17 @@ class UnreadActivityViewModel : ViewModel() {
     }
 }
 
-/** Watches one chat's newest message and this rider's own read marker for it, together deciding
- * whether that one chat currently counts as unread. */
+/** Watches one chat's recent messages and this rider's own read marker for it, calculating
+ * the exact unread message count. */
 private class ChatWatcher(uid: String, chatId: String, private val onChange: () -> Unit) {
-    private var latestMessageAt: Timestamp? = null
+    private var messageTimestamps: List<Timestamp> = emptyList()
     private var lastReadAt: Timestamp? = null
 
     private val messageListener = FirebaseRefs.chats.document(chatId).collection("messages")
         .orderBy("timestamp", Query.Direction.DESCENDING)
-        .limit(1)
+        .limit(20)
         .addSnapshotListener { snapshot, _ ->
-            latestMessageAt = snapshot?.documents?.firstOrNull()?.getTimestamp("timestamp")
+            messageTimestamps = snapshot?.documents?.mapNotNull { it.getTimestamp("timestamp") } ?: emptyList()
             onChange()
         }
 
@@ -119,11 +133,13 @@ private class ChatWatcher(uid: String, chatId: String, private val onChange: () 
             onChange()
         }
 
-    fun isUnread(): Boolean {
-        val newest = latestMessageAt ?: return false // no messages at all yet — nothing to be unread
-        val read = lastReadAt ?: return true // has messages, never opened
-        return newest > read
+    fun unreadCount(): Int {
+        if (messageTimestamps.isEmpty()) return 0
+        val read = lastReadAt ?: return messageTimestamps.size
+        return messageTimestamps.count { it > read }
     }
+
+    fun isUnread(): Boolean = unreadCount() > 0
 
     fun remove() {
         messageListener.remove()

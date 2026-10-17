@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -35,17 +39,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.offcampus.app.data.model.Rider
 import com.offcampus.app.ui.avatar.AvatarView
+import com.offcampus.app.ui.chat.friendChatId
 
 @Composable
 fun FriendsScreen(
     onOpenChat: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
+    unreadChatIds: Set<String> = emptySet(),
+    unreadCounts: Map<String, Int> = emptyMap(),
     viewModel: FriendsViewModel = viewModel()
 ) {
     val friends by viewModel.friends.collectAsStateWithLifecycle()
@@ -174,9 +185,15 @@ fun FriendsScreen(
             }
         }
 
+        val myUid = Firebase.auth.currentUser?.uid ?: ""
         items(friends, key = { it.id }) { friend ->
+            val chatId = if (myUid.isNotBlank()) friendChatId(myUid, friend.id) else ""
+            val unreadCount = unreadCounts[chatId] ?: 0
+            val hasUnread = unreadCount > 0 || (chatId in unreadChatIds)
             FriendRow(
                 friend = friend,
+                hasUnreadChat = hasUnread,
+                unreadChatCount = unreadCount,
                 onOpenProfile = { onOpenProfile(friend.id) },
                 onOpenChat = { onOpenChat(friend.id) }
             )
@@ -259,6 +276,8 @@ private fun IncomingRequestRow(
 @Composable
 private fun FriendRow(
     friend: Rider,
+    hasUnreadChat: Boolean = false,
+    unreadChatCount: Int = 0,
     onOpenProfile: () -> Unit,
     onOpenChat: () -> Unit
 ) {
@@ -284,6 +303,41 @@ private fun FriendRow(
                 )
             }
         }
-        OutlinedButton(onClick = onOpenChat) { Text("Chat") }
+        OutlinedButton(
+            onClick = onOpenChat,
+            shape = RoundedCornerShape(999.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            BadgedBox(
+                badge = {
+                    if (hasUnreadChat || unreadChatCount > 0) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ) {
+                            if (unreadChatCount > 0) {
+                                Text(
+                                    text = if (unreadChatCount > 9) "9+" else "$unreadChatCount",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Forum,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Chat", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
 }

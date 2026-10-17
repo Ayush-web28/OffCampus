@@ -72,9 +72,11 @@ import com.offcampus.app.data.model.RideType
 fun LobbyBrowseScreen(
     onCreateLobby: () -> Unit,
     onOpenLobby: (String) -> Unit,
+    onOpenLobbyChat: (String) -> Unit = {},
     onOpenTripHistory: () -> Unit,
     onOpenPaymentSplit: (String) -> Unit,
     unreadChatIds: Set<String> = emptySet(),
+    unreadCounts: Map<String, Int> = emptyMap(),
     viewModel: LobbyBrowseViewModel = viewModel()
 ) {
     val lobbies by viewModel.visibleLobbies.collectAsStateWithLifecycle()
@@ -438,10 +440,13 @@ fun LobbyBrowseScreen(
             activeLobby?.let { active ->
                 item(key = "active_ride_${active.id}") {
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        val unreadCount = unreadCounts[active.id] ?: 0
                         ActiveRideCard(
                             lobby = active,
                             isMaster = active.createdBy == currentUserId,
-                            hasUnreadChat = active.id in unreadChatIds,
+                            hasUnreadChat = active.id in unreadChatIds || unreadCount > 0,
+                            unreadChatCount = unreadCount,
+                            onOpenChat = { onOpenLobbyChat(active.id) },
                             onClick = { onOpenLobby(active.id) }
                         )
                     }
