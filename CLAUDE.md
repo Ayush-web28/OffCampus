@@ -298,6 +298,9 @@ A **real bug** did surface, though, the first time this was tested against an ac
      - **Location**: Updated placeholder to `"Main Campus"`.
      - **Destination**: Replaced outdated Bengaluru reference (`"HSR Layout, BKC..."`) with Mumbai student transit presets (`"BKC, Thane Station, Airport T2..."`).
 
+- **Fix 51 — Retain 30-minute forward offset for Create Lobby departure time** (UX adjustment):
+  - In `PostTripViewModel.kt`, restored the 30-minute forward offset (`add(Calendar.MINUTE, 30)`) in `defaultDepartureTime()` per user request, defaulting the initial lobby departure time to 30 minutes from the current time while keeping seconds and milliseconds cleanly cleared to 0.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

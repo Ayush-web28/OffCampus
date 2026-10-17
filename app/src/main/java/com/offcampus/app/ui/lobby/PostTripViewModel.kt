@@ -23,6 +23,7 @@ import java.util.Calendar
 import java.util.Date
 
 private fun defaultDepartureTime(): Date = Calendar.getInstance().apply {
+    add(Calendar.MINUTE, 30)
     set(Calendar.SECOND, 0)
     set(Calendar.MILLISECOND, 0)
 }.time
