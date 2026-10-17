@@ -73,7 +73,7 @@ fun LobbyBrowseScreen(
     onCreateLobby: () -> Unit,
     onOpenLobby: (String) -> Unit,
     onOpenLobbyChat: (String) -> Unit = {},
-    onOpenTripHistory: () -> Unit,
+    onOpenTripHistory: () -> Unit = {},
     onOpenPaymentSplit: (String) -> Unit,
     unreadChatIds: Set<String> = emptySet(),
     unreadCounts: Map<String, Int> = emptyMap(),
@@ -86,6 +86,7 @@ fun LobbyBrowseScreen(
     val currentUserId = viewModel.currentUserId
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
+    val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val friendLobbyNotification by viewModel.friendLobbyNotification.collectAsStateWithLifecycle()
     val expiredLobbyAlert by viewModel.expiredLobbyAlert.collectAsStateWithLifecycle()
 
@@ -238,44 +239,25 @@ fun LobbyBrowseScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "header") {
-                Row(
+                Text(
+                    "Lobbies",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Lobbies",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedButton(
-                        onClick = onOpenTripHistory,
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                    ) {
-                        Text("Past rides", fontWeight = FontWeight.SemiBold)
-                    }
-                }
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                )
             }
 
             item(key = "search") {
-                OutlinedTextField(
+                LocationAutocompleteField(
                     value = filters.destinationQuery,
+                    suggestions = searchSuggestions,
+                    isLoading = queryLoading,
                     onValueChange = viewModel::onDestinationQueryChange,
-                    label = { Text("Search destination") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    trailingIcon = if (queryLoading) {
-                        {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    } else clearableTrailingIcon(filters.destinationQuery) { viewModel.onDestinationQueryChange("") },
+                    onSuggestionSelected = viewModel::onSuggestionSelected,
+                    label = "Search destination",
+                    placeholder = "e.g. Thane, BKC, Airport",
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)

@@ -286,6 +286,11 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - Added badged indicators to `ActiveRideCard`'s chat icon showing unread message count (or red dot) when the active lobby has unread chat messages.
   - Added badged indicators to `FriendRow` in `FriendsScreen.kt`: the "Chat" button displays the chat icon and a red badge showing the unread message count or presence dot from that specific friend.
 
+- **Fix 49 — Blocked user lobby filtering, search suggestions dropdown, and remove past rides from lobby screen** (three combined improvements):
+  1. Filtered out lobbies created by or containing blocked users: `LobbyBrowseViewModel.kt` now observes `_blockedUserIds` on the current rider and excludes lobbies where `createdBy in blockedUserIds` or any member is in `blockedUserIds` from `visibleLobbies` and `hasAnyLobbies`.
+  2. Integrated place search suggestions into lobby screen destination search: `LobbyBrowseViewModel.kt` exposes `searchSuggestions` populated by instant local presets (including newly added Thane Station East/West and transit hubs in `PlaceSearchService.kt`) and debounced Photon geocoder results. `LobbyBrowseScreen.kt` now renders `LocationAutocompleteField` with an interactive dropdown for suggestions (e.g. typing "thane" displays "Thane Station (West)", "Thane Station (East)", etc.).
+  3. Removed the "Past rides" header button from `LobbyBrowseScreen.kt`, decluttering the lobbies screen since trip history is already directly accessible from the Profile tab.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

@@ -53,7 +53,11 @@ object PlaceSearchService {
         PlaceSuggestion("Bandra Station (West)", "Hill Road / SV Road, Bandra West", 19.0544, 72.8402),
         PlaceSuggestion("Juhu Beach", "Juhu Tara Road, Juhu", 19.0988, 72.8264),
         PlaceSuggestion("Infinity Mall (Andheri)", "Link Road, Andheri West", 19.1415, 72.8310),
-        PlaceSuggestion("Phoenix Marketcity", "LBS Marg, Kurla West", 19.0864, 72.8890)
+        PlaceSuggestion("Phoenix Marketcity", "LBS Marg, Kurla West", 19.0864, 72.8890),
+        PlaceSuggestion("Thane Station (West)", "Gokhale Road, Thane West", 19.1860, 72.9757),
+        PlaceSuggestion("Thane Station (East)", "Station Road, Thane East", 19.1872, 72.9775),
+        PlaceSuggestion("Borivali Station (West)", "SV Road, Borivali West", 19.2294, 72.8568),
+        PlaceSuggestion("Dadar Station", "Dadar West, Mumbai", 19.0178, 72.8478)
     )
 
     /**

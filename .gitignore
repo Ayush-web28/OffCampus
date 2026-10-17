@@ -21,3 +21,4 @@ seed/serviceAccountKey.json
 node_modules/
 seed/node_modules/
 HANDOFF.md
+.kotlin/

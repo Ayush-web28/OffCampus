@@ -79,6 +79,10 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
     val filters: StateFlow<LobbyFilters> = _filters.asStateFlow()
 
     private val _friendIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _blockedUserIds = MutableStateFlow<Set<String>>(emptySet())
+
+    private val _searchSuggestions = MutableStateFlow<List<PlaceSuggestion>>(emptyList())
+    val searchSuggestions: StateFlow<List<PlaceSuggestion>> = _searchSuggestions.asStateFlow()
 
     // In-app stand-in for the real push notification Phase 9's Cloud Function will send —
     // this only fires while the screen is open, since there's no server trigger yet.
@@ -156,6 +160,7 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
         paymentPayerListener?.remove()
         pendingPaymentJob?.cancel()
         _friendIds.value = emptySet()
+        _blockedUserIds.value = emptySet()
         _activeLobby.value = null
         _userLobbies.value = emptyList()
         _asParticipantSplits.value = emptyList()
@@ -163,7 +168,9 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
         _pendingPayment.value = null
         if (id == null) return
         riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
-            _friendIds.value = snapshot?.toObject(Rider::class.java)?.friendIds?.toSet() ?: emptySet()
+            val rider = snapshot?.toObject(Rider::class.java)
+            _friendIds.value = rider?.friendIds?.toSet() ?: emptySet()
+            _blockedUserIds.value = rider?.blockedUserIds?.toSet() ?: emptySet()
         }
         activeLobbyListener = FirebaseRefs.lobbies
             .whereArrayContains("memberIds", id)
@@ -334,12 +341,16 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
                         SortOption.MOST_OPEN -> filtered.sortedByDescending { it.maxSize - it.memberIds.size }
                     }
                 }
+        }.combine(_blockedUserIds) { filtered, blockedUserIds ->
+            filtered.filter { lobby ->
+                lobby.createdBy !in blockedUserIds && lobby.memberIds.none { it in blockedUserIds }
+            }
         }.combine(_activeLobby) { filtered, activeLobby ->
             filtered.filter { it.id != activeLobby?.id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val hasAnyLobbies: StateFlow<Boolean> = combine(_lobbies, nowTicker) { lobbies, now ->
-        lobbies.any { !isStale(it, now) && !it.isAutoExpired(now) }
+    val hasAnyLobbies: StateFlow<Boolean> = combine(_lobbies, _blockedUserIds, nowTicker) { lobbies, blockedUserIds, now ->
+        lobbies.any { !isStale(it, now) && !it.isAutoExpired(now) && it.createdBy !in blockedUserIds }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** A lobby that's been sitting OPEN for more than [STALE_AFTER_MS] since it was created is
@@ -371,24 +382,36 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
     fun onDestinationQueryChange(query: String) {
         _filters.update { it.copy(destinationQuery = query) }
         queryLocationJob?.cancel()
-        if (query.trim().length < 3) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) {
+            _searchSuggestions.value = emptyList()
             _queryLocation.value = null
             _queryLoading.value = false
             return
         }
-        // Same 300ms-debounce-then-search shape as PostTripViewModel's Gate/Destination
-        // fields — one geocode per pause in typing. The rider never picks from a list here
-        // (there's no dropdown on this field), so the top result stands in for "the place
-        // they mean," the same way a rider typing without ever tapping a suggestion on Post
-        // Trip just gets plain text matching instead — this is that same graceful fallback,
-        // just automated instead of requiring a tap.
+
+        // Show immediate local presets matching the query
+        val immediate = PlaceSearchService.searchLocalPresets(trimmed)
+        if (immediate.isNotEmpty()) {
+            _searchSuggestions.value = immediate
+        }
+
         queryLocationJob = viewModelScope.launch {
             delay(300)
             _queryLoading.value = true
-            val results = PlaceSearchService.search(query)
+            val results = PlaceSearchService.search(trimmed)
+            _searchSuggestions.value = results
             _queryLocation.value = results.firstOrNull()
             _queryLoading.value = false
         }
+    }
+
+    fun onSuggestionSelected(suggestion: PlaceSuggestion) {
+        queryLocationJob?.cancel()
+        _filters.update { it.copy(destinationQuery = suggestion.name) }
+        _queryLocation.value = suggestion
+        _searchSuggestions.value = emptyList()
+        _queryLoading.value = false
     }
 
     fun onRideTypeChange(rideType: RideType?) = _filters.update { it.copy(rideType = rideType) }
@@ -398,6 +421,7 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
     fun resetFilters() {
         _filters.value = LobbyFilters()
         _queryLocation.value = null
+        _searchSuggestions.value = emptyList()
     }
 
     /** Master can cancel an active lobby directly from browse before starting a new one. */

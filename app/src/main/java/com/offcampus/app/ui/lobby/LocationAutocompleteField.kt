@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
@@ -60,7 +62,8 @@ fun LocationAutocompleteField(
     onSuggestionSelected: (PlaceSuggestion) -> Unit,
     label: String,
     placeholder: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(16.dp)
 ) {
     // Dismissed manually (suggestion tapped, or the user taps elsewhere) rather than tied to
     // focus — losing focus by tapping a suggestion row would otherwise close the menu before
@@ -78,6 +81,7 @@ fun LocationAutocompleteField(
             label = { Text(label) },
             placeholder = { Text(placeholder) },
             singleLine = true,
+            shape = shape,
             // Loading takes priority — while a search is in flight there's nothing useful yet
             // to clear the field back to anyway, and swapping straight to the × the instant a
             // result lands is expected, not jarring.
