@@ -349,6 +349,10 @@ A **real bug** did surface, though, the first time this was tested against an ac
     - In `FriendsScreen.kt`, removed `BadgedBox` and placed `Badge` directly inline inside the `Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp))`: `[Icon] -> Text("Chat") -> Badge`. The badge now cleanly follows the text with a 6dp gap without ever obscuring the label.
     - Standardized `LobbyDetailScreen.kt`'s "Open lobby chat" button with the same inline badge layout, preventing badge overlap on lobby chat buttons as well.
 
+- **Fix 57 — Remove marketing subtitle chips from Create Lobby screen** (UI polish):
+  - Removed the superfluous secondary text tags `"Fast pooling"` and `"Pocket-friendly"` from the Group Size and Ride Type section headers in `PostTripScreen.kt`.
+  - Replaced the two horizontal split rows with standard, uncluttered `Text` headers (`"Group size (max riders)"` and `"Ride type"`), streamlining the lobby creation flow.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
