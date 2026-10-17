@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 private data class BottomTab(val route: String, val label: String, val icon: ImageVector)
@@ -118,7 +119,8 @@ private fun BottomTabItem(
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
         label = "navIconScale"
     )
-    val tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val iconTint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val textTint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = modifier
@@ -136,16 +138,17 @@ private fun BottomTabItem(
                 // things that don't share a unit (a pending friend request, an unread message
                 // in any chat), so a single combined number wouldn't mean anything specific.
                 BadgedBox(badge = { Badge() }) {
-                    Icon(tab.icon, contentDescription = null, tint = tint)
+                    Icon(tab.icon, contentDescription = null, tint = iconTint)
                 }
             } else {
-                Icon(tab.icon, contentDescription = null, tint = tint)
+                Icon(tab.icon, contentDescription = null, tint = iconTint)
             }
         }
         Text(
-            tab.label,
+            text = tab.label,
             style = MaterialTheme.typography.labelSmall,
-            color = tint,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = textTint,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
