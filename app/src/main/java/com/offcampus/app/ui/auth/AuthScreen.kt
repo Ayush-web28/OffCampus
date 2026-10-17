@@ -63,7 +63,9 @@ fun AuthScreen(viewModel: AuthViewModel) {
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("OffCampus", style = MaterialTheme.typography.displayLarge)
+            com.offcampus.app.ui.common.OffCampusBrandHeader(
+                modifier = Modifier.padding(bottom = 20.dp)
+            )
 
             val needsProfile = uiState as? AuthUiState.NeedsProfile
             when {

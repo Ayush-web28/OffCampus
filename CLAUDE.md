@@ -379,7 +379,15 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * In `ProfileViewModel`, added live observation of `blockedRiders` (resolving rider profiles via Firestore batching) and an `unblockUser(blockedUserId)` function removing the ID from `blockedUserIds`.
     * In `ProfileScreen.kt`, added a "Blocked accounts" action that opens an Instagram-like modal dialog displaying avatars, names, emails, and an "Unblock" button with instant reactive updates.
 
-
+- **Fix 61 — Long route text wrapping and Lloyds green transit app logo** (UI polish & Branding):
+  - **Text Wrapping for Long Location and Destination Names**:
+    * In `LobbyCard.kt` (`LobbyCard` and `ActiveRideCard`): Combined gate, directional arrow, and destination into a unified `buildAnnotatedString` with `maxLines = 2, overflow = TextOverflow.Ellipsis`. Long campus gate and destination names now wrap cleanly across up to 2 lines instead of clipping the destination or breaking card geometry.
+    * In `ChatScreen.kt`: Applied `style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis` to the `TopAppBar` title, so long route headers wrap gracefully without taking up excessive top bar space.
+    * In `LobbyDetailScreen.kt`: Kept full, unwrapped location and destination names without truncation or `maxLines` capping when opening a lobby to lock or join.
+  - **Brand Transit Logo and Adaptive Launcher Icon**:
+    * Updated `@color/ic_launcher_background` in `colors.xml` to Lloyds Deep Forest Green (`#005A36`), matching the app's executive color identity.
+    * Redesigned `ic_launcher_foreground.xml` with a geometric transit mark: an outbound campus mobility ring with a directional departure arrow and 3 pooled passenger nodes. Added `android:roundIcon` in `AndroidManifest.xml`.
+    * Created `OffCampusLogo.kt` (`OffCampusLogoIcon` and `OffCampusBrandHeader`) in `ui/common/` and integrated the brand mark on `AuthScreen.kt`.
 
 
 ## Working method — phased, not linear

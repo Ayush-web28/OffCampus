@@ -52,7 +52,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -200,8 +203,20 @@ fun LobbyDetailScreen(
                         RideTypeChip(current.rideType)
                     }
 
+                    val detailRouteText = buildAnnotatedString {
+                        append(current.gate)
+                        withStyle(
+                            SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        ) {
+                            append(" → ")
+                        }
+                        append(current.destination)
+                    }
                     Text(
-                        text = "${current.gate} → ${current.destination}",
+                        text = detailRouteText,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 10.dp)
