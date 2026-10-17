@@ -361,6 +361,16 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * In `ActiveRideCard`, if the current user is riding in a lobby created by a friend, the header indicates `"ACTIVE LOBBY • HOST: <FRIEND NAME>"` instead of the generic label.
     * In `LobbyBrowseViewModel`, added `friendIds` and `friendNames` state flows. Automatically resolves friend profiles and caches names using Firestore `whereIn` batching and fallback retrieval, providing instant reactive updates as soon as friend data arrives.
 
+- **Fix 59 — Auto-cancel created lobby on join with rider notifications, and red Leave Lobby button** (Lifecycle & UI fix):
+  - **Auto-Cancel on Join**: When a user who already created an active or open lobby joins someone else's lobby, their previous lobby is automatically cancelled in Firestore with reason `HOST_JOINED_ANOTHER`.
+  - **Alerts & Push Notifications**:
+    * An in-app alert dialog confirms to the host that their previous lobby was cancelled.
+    * If other riders had joined the host's lobby, they are immediately notified outside the app via FCM push notification (`NotificationService.notifyLobbyCancelledByHost`) and informed inside the app via an in-app alert dialog on `LobbyBrowseScreen`.
+  - **Leave Lobby Button Styling**:
+    * Redesigned the "Leave lobby" button in `LobbyDetailScreen.kt` with high-contrast red error styling (1.5dp red border, error-tinted background, and bold red text).
+    * Added a protective confirmation dialog (`"Leave lobby?"`) to prevent accidental seat forfeiture.
+
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

@@ -36,6 +36,13 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
     private val _isUpdating = MutableStateFlow(false)
     val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
 
+    private val _hostCancelledAlert = MutableStateFlow<String?>(null)
+    val hostCancelledAlert: StateFlow<String?> = _hostCancelledAlert.asStateFlow()
+
+    fun dismissHostCancelledAlert() {
+        _hostCancelledAlert.value = null
+    }
+
     private var listener: ListenerRegistration? = null
 
     init {
@@ -104,11 +111,45 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         viewModelScope.launch {
             _isUpdating.value = true
             try {
-                FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayUnion(uid)).await()
-                // Fetch joiner's name to construct push notification
+                // Fetch joiner's name
                 val currentRider = FirebaseRefs.riders.document(uid).get().await().toObject(Rider::class.java)
-                val joinerName = currentRider?.name ?: "A rider"
-                // 1. Notify lobby master
+                val joinerName = currentRider?.name?.trim()?.ifBlank { "Host" } ?: "Host"
+
+                // 1. If this user had created another OPEN or LOCKED lobby, auto-cancel it
+                try {
+                    val existingMasterLobbies = FirebaseRefs.lobbies
+                        .whereEqualTo("createdBy", uid)
+                        .whereIn("status", listOf(LobbyStatus.OPEN.name, LobbyStatus.LOCKED.name))
+                        .get().await()
+                        .documents
+                        .mapNotNull { doc -> doc.toObject(Lobby::class.java)?.copy(id = doc.id) }
+                        .filter { it.id != lobbyId }
+
+                    for (oldLobby in existingMasterLobbies) {
+                        FirebaseRefs.lobbies.document(oldLobby.id).update(
+                            mapOf(
+                                "status" to LobbyStatus.CANCELLED.name,
+                                "cancelReason" to Lobby.CANCEL_REASON_HOST_LEFT
+                            )
+                        ).await()
+
+                        val otherMembers = oldLobby.memberIds.filter { it != uid }
+                        if (otherMembers.isNotEmpty()) {
+                            NotificationService.notifyLobbyCancelledByHost(
+                                memberIds = otherMembers,
+                                hostName = joinerName,
+                                destination = oldLobby.destination,
+                                lobbyId = oldLobby.id
+                            )
+                        }
+                        _hostCancelledAlert.value = "Your previously created lobby to ${oldLobby.destination} was automatically cancelled."
+                    }
+                } catch (_: Exception) {}
+
+                // 2. Join the target lobby
+                FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayUnion(uid)).await()
+
+                // 3. Notify lobby master
                 if (currentLobby.createdBy != uid) {
                     NotificationService.notifyRiderJoinedLobby(
                         masterId = currentLobby.createdBy,
@@ -117,7 +158,7 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
                         lobbyId = lobbyId
                     )
                 }
-                // 2. Notify all if lobby is now full
+                // 4. Notify all if lobby is now full
                 val newCount = currentLobby.memberIds.size + 1
                 if (newCount >= currentLobby.maxSize) {
                     NotificationService.notifyLobbyFull(

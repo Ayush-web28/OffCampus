@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.RideType
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,6 +188,7 @@ fun LobbyBrowseScreen(
 
     if (expiredLobbyAlert != null) {
         val expired = expiredLobbyAlert!!
+        val isHostLeft = expired.cancelReason == Lobby.CANCEL_REASON_HOST_LEFT
         val formattedTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(expired.departureTime.toDate())
         AlertDialog(
             onDismissRequest = { viewModel.dismissExpiredLobbyAlert(expired.id) },
@@ -198,10 +200,19 @@ fun LobbyBrowseScreen(
                     modifier = Modifier.size(28.dp)
                 )
             },
-            title = { Text("Lobby Cancelled", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = if (isHostLeft) "Lobby Cancelled by Host" else "Lobby Cancelled",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Text(
-                    "Your lobby to ${expired.destination} scheduled for $formattedTime was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                    if (isHostLeft) {
+                        "The lobby to ${expired.destination} was cancelled because the host joined another ride."
+                    } else {
+                        "Your lobby to ${expired.destination} scheduled for $formattedTime was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                    }
                 )
             },
             confirmButton = {

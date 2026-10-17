@@ -32,6 +32,7 @@ data class Lobby(
 ) {
     companion object {
         const val CANCEL_REASON_AUTO_EXPIRED = "AUTO_EXPIRED"
+        const val CANCEL_REASON_HOST_LEFT = "HOST_JOINED_ANOTHER"
         const val EXPIRATION_GRACE_MS = 60_000L
     }
 

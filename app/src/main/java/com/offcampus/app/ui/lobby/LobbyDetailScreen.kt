@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
@@ -83,6 +84,53 @@ fun LobbyDetailScreen(
     val lobby by viewModel.lobby.collectAsStateWithLifecycle()
     val members by viewModel.members.collectAsStateWithLifecycle()
     val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
+    val hostCancelledAlert by viewModel.hostCancelledAlert.collectAsStateWithLifecycle()
+    var showLeaveDialog by remember { mutableStateOf(false) }
+
+    if (hostCancelledAlert != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissHostCancelledAlert,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = { Text("Previous Lobby Cancelled", fontWeight = FontWeight.Bold) },
+            text = { Text(hostCancelledAlert!!) },
+            confirmButton = {
+                Button(onClick = viewModel::dismissHostCancelledAlert) {
+                    Text("Understood")
+                }
+            }
+        )
+    }
+
+    if (showLeaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveDialog = false },
+            title = { Text("Leave lobby?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to leave this lobby? You will forfeit your seat.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLeaveDialog = false
+                        viewModel.leave()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Leave lobby", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveDialog = false }) {
+                    Text("Stay")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -278,13 +326,18 @@ fun LobbyDetailScreen(
                         onCancel = { viewModel.cancelLobby(onBack) }
                     )
                     viewModel.currentUid in current.memberIds -> OutlinedButton(
-                        onClick = viewModel::leave,
+                        onClick = { showLeaveDialog = true },
                         enabled = !isUpdating,
                         shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.10f),
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                    ) { Text("Leave lobby", fontWeight = FontWeight.SemiBold) }
+                    ) { Text("Leave lobby", fontWeight = FontWeight.Bold) }
                     current.memberIds.size < current.maxSize -> JoinLobbyButton(
                         isUpdating = isUpdating,
                         onClick = viewModel::join

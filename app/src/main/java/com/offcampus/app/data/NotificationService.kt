@@ -115,6 +115,20 @@ object NotificationService {
         }
     }
 
+    /** When lobby is cancelled because the host joined another lobby */
+    fun notifyLobbyCancelledByHost(memberIds: List<String>, hostName: String, destination: String, lobbyId: String) {
+        if (memberIds.isEmpty()) return
+        scope.launch {
+            val tokens = getTokensForRiders(memberIds)
+            send(
+                tokens = tokens,
+                title = "Lobby Cancelled",
+                body = "$hostName cancelled the lobby to $destination by joining another ride.",
+                data = mapOf("type" to "LOBBY_CANCELLED", "lobbyId" to lobbyId)
+            )
+        }
+    }
+
     /** 3b. New friend request */
     fun notifyFriendRequest(recipientId: String, senderName: String) {
         scope.launch {

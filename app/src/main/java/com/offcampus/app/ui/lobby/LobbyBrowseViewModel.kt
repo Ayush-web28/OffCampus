@@ -233,9 +233,9 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
             .maxByOrNull { it.departureTime.seconds }
         _activeLobby.value = active
 
-        // 3. Inform user of unacknowledged auto-expired lobbies within the last 24 hours
+        // 3. Inform user of unacknowledged cancelled/expired lobbies within the last 24 hours
         val unacknowledged = userLobbies.firstOrNull { lobby ->
-            lobby.isAutoExpired(nowMs) &&
+            (lobby.isAutoExpired(nowMs) || lobby.cancelReason == Lobby.CANCEL_REASON_HOST_LEFT) &&
                 (lobby.status == LobbyStatus.CANCELLED || lobby.status == LobbyStatus.OPEN) &&
                 lobby.id !in acknowledgedExpiredLobbyIds &&
                 nowMs - lobby.departureTime.toDate().time < 24 * 60 * 60 * 1000L
