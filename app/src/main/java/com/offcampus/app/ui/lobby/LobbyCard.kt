@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material3.Badge
@@ -47,7 +48,13 @@ private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
  * Stitch Neo-Transit styled Lobby card for the browse list.
  */
 @Composable
-fun LobbyCard(lobby: Lobby, hasUnreadChat: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LobbyCard(
+    lobby: Lobby,
+    hasUnreadChat: Boolean = false,
+    hostFriendName: String? = null,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
@@ -57,6 +64,39 @@ fun LobbyCard(lobby: Lobby, hasUnreadChat: Boolean = false, onClick: () -> Unit,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            if (!hostFriendName.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(999.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Hosted by $hostFriendName",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -181,6 +221,7 @@ fun ActiveRideCard(
     onClick: () -> Unit,
     hasUnreadChat: Boolean = false,
     unreadChatCount: Int = 0,
+    hostFriendName: String? = null,
     onOpenChat: () -> Unit = onClick,
     modifier: Modifier = Modifier
 ) {
@@ -217,11 +258,17 @@ fun ActiveRideCard(
                                 .background(MaterialTheme.colorScheme.primary, CircleShape)
                         )
                         Text(
-                            text = if (isMaster) "YOUR ACTIVE LOBBY (MASTER)" else "YOUR ACTIVE LOBBY",
+                            text = when {
+                                isMaster -> "YOUR ACTIVE LOBBY (MASTER)"
+                                !hostFriendName.isNullOrBlank() -> "ACTIVE LOBBY • HOST: ${hostFriendName.uppercase()}"
+                                else -> "YOUR ACTIVE LOBBY"
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                            letterSpacing = 0.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         if (hasUnreadChat || unreadChatCount > 0) {
                             Box(

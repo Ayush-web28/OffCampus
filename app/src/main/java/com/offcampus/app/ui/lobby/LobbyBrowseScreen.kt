@@ -84,6 +84,8 @@ fun LobbyBrowseScreen(
     val activeLobby by viewModel.activeLobby.collectAsStateWithLifecycle()
     val pendingPayment by viewModel.pendingPayment.collectAsStateWithLifecycle()
     val currentUserId = viewModel.currentUserId
+    val friendIds by viewModel.friendIds.collectAsStateWithLifecycle()
+    val friendNames by viewModel.friendNames.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
@@ -423,9 +425,14 @@ fun LobbyBrowseScreen(
                 item(key = "active_ride_${active.id}") {
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                         val unreadCount = unreadCounts[active.id] ?: 0
+                        val isMaster = active.createdBy == currentUserId
+                        val hostFriendName = if (!isMaster && active.createdBy in friendIds) {
+                            friendNames[active.createdBy]?.takeIf { it.isNotBlank() } ?: "Friend"
+                        } else null
                         ActiveRideCard(
                             lobby = active,
-                            isMaster = active.createdBy == currentUserId,
+                            isMaster = isMaster,
+                            hostFriendName = hostFriendName,
                             hasUnreadChat = active.id in unreadChatIds || unreadCount > 0,
                             unreadChatCount = unreadCount,
                             onOpenChat = { onOpenLobbyChat(active.id) },
@@ -460,9 +467,13 @@ fun LobbyBrowseScreen(
                     exit = fadeOut() + scaleOut(targetScale = 0.92f),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 ) {
+                    val hostFriendName = if (lobby.createdBy in friendIds) {
+                        friendNames[lobby.createdBy]?.takeIf { it.isNotBlank() } ?: "Friend"
+                    } else null
                     LobbyCard(
                         lobby = lobby,
                         hasUnreadChat = lobby.id in unreadChatIds || (unreadCounts[lobby.id] ?: 0) > 0,
+                        hostFriendName = hostFriendName,
                         onClick = { onOpenLobby(lobby.id) }
                     )
                 }

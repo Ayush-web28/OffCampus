@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
@@ -79,7 +80,12 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
     val filters: StateFlow<LobbyFilters> = _filters.asStateFlow()
 
     private val _friendIds = MutableStateFlow<Set<String>>(emptySet())
+    val friendIds: StateFlow<Set<String>> = _friendIds.asStateFlow()
     private val _blockedUserIds = MutableStateFlow<Set<String>>(emptySet())
+
+    private val friendNameCache = mutableMapOf<String, String>()
+    private val _friendNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val friendNames: StateFlow<Map<String, String>> = _friendNames.asStateFlow()
 
     private val _searchSuggestions = MutableStateFlow<List<PlaceSuggestion>>(emptyList())
     val searchSuggestions: StateFlow<List<PlaceSuggestion>> = _searchSuggestions.asStateFlow()
@@ -150,6 +156,8 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
                 seenLobbyIds = lobbies.map { it.id }.toMutableSet()
 
                 _lobbies.value = lobbies
+                val friendLobbyHosts = lobbies.map { it.createdBy }.filter { it in _friendIds.value }
+                resolveFriendNames(friendLobbyHosts)
             }
     }
 
@@ -160,6 +168,8 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
         paymentPayerListener?.remove()
         pendingPaymentJob?.cancel()
         _friendIds.value = emptySet()
+        _friendNames.value = emptyMap()
+        friendNameCache.clear()
         _blockedUserIds.value = emptySet()
         _activeLobby.value = null
         _userLobbies.value = emptyList()
@@ -169,8 +179,10 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
         if (id == null) return
         riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
             val rider = snapshot?.toObject(Rider::class.java)
-            _friendIds.value = rider?.friendIds?.toSet() ?: emptySet()
+            val newFriendIds = rider?.friendIds?.toSet() ?: emptySet()
+            _friendIds.value = newFriendIds
             _blockedUserIds.value = rider?.blockedUserIds?.toSet() ?: emptySet()
+            resolveFriendNames(newFriendIds)
         }
         activeLobbyListener = FirebaseRefs.lobbies
             .whereArrayContains("memberIds", id)
@@ -296,9 +308,15 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun notifyFriendLobby(lobby: Lobby) {
         viewModelScope.launch {
-            val name = try {
-                FirebaseRefs.riders.document(lobby.createdBy).get().await()
-                    .toObject(Rider::class.java)?.name
+            val cachedName = friendNameCache[lobby.createdBy]
+            val name = cachedName ?: try {
+                val fetched = FirebaseRefs.riders.document(lobby.createdBy).get().await()
+                    .toObject(Rider::class.java)?.name?.trim()
+                if (!fetched.isNullOrBlank()) {
+                    friendNameCache[lobby.createdBy] = fetched
+                    _friendNames.value = friendNameCache.toMap()
+                }
+                fetched
             } catch (e: Exception) {
                 null
             } ?: "A friend"
@@ -309,6 +327,44 @@ class LobbyBrowseViewModel(application: Application) : AndroidViewModel(applicat
 
     fun dismissFriendLobbyNotification() {
         _friendLobbyNotification.value = null
+    }
+
+    private fun resolveFriendNames(ids: Collection<String>) {
+        val toFetch = ids.filter { it.isNotBlank() && it !in friendNameCache }.distinct()
+        if (toFetch.isEmpty()) {
+            if (_friendNames.value.size != friendNameCache.size) {
+                _friendNames.value = friendNameCache.toMap()
+            }
+            return
+        }
+        viewModelScope.launch {
+            for (chunk in toFetch.chunked(30)) {
+                try {
+                    val snapshot = FirebaseRefs.riders
+                        .whereIn(FieldPath.documentId(), chunk)
+                        .get().await()
+                    for (doc in snapshot.documents) {
+                        val rider = doc.toObject(Rider::class.java)
+                        val name = rider?.name?.trim()
+                        if (!name.isNullOrBlank()) {
+                            friendNameCache[doc.id] = name
+                        }
+                    }
+                } catch (_: Exception) {
+                    for (friendId in chunk) {
+                        try {
+                            val doc = FirebaseRefs.riders.document(friendId).get().await()
+                            val rider = doc.toObject(Rider::class.java)
+                            val name = rider?.name?.trim()
+                            if (!name.isNullOrBlank()) {
+                                friendNameCache[friendId] = name
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+            _friendNames.value = friendNameCache.toMap()
+        }
     }
 
     // Ticks once immediately, then every 10 seconds — to evaluate auto-expiration and staleness
