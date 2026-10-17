@@ -12,6 +12,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.offcampus.app.MainActivity
+import com.offcampus.app.OffCampusApp
 import com.offcampus.app.R
 
 class OffCampusFirebaseMessagingService : FirebaseMessagingService() {
@@ -24,6 +25,12 @@ class OffCampusFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
+
+        // Only show system push notifications when the app is in background, closed, or device locked.
+        // In-app live Firestore listeners already deliver real-time updates when the app is open.
+        if (OffCampusApp.isAppInForeground) {
+            return
+        }
 
         val title = remoteMessage.notification?.title
             ?: remoteMessage.data["title"]

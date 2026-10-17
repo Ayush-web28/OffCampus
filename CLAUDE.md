@@ -310,6 +310,18 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - **Card & Component Architecture**: Standardized on 14dp corner radiuses (`medium` / `TicketCardShape`) across `LobbyCard`, `ActiveRideCard`, `PendingPaymentBanner`, `LobbyDetailScreen`, `PostTripScreen`, `PaymentSplitScreen`, `FriendsScreen`, `UserProfileScreen`, and `ProfileScreen`. Added a 1px top hairline divider to `OffCampusBottomBar`.
   - **Zero Functional Drift**: Preserved 100% of existing behavior, button routes, dialog listeners, active lobby badged chat launcher placement, search suggestions, and Create Lobby fields.
 
+- **Fix 53 — Crisp typography scale with Manrope, button layout fixes, and foreground push notification suppression** (UI/UX & Notification refinement):
+  - **Typography & Font Legibility**:
+    * Replaced pixelated/quirky `JetBrainsMono` in `labelSmall` with clean, proportional `Manrope` (`SemiBold`, `12.sp`). Capacity counters (`2/3 riders`), timestamps (`6:49 PM`), status badges (`LOBBY OPEN`), and vehicle chips (`Auto`) now render with natural kerning, zero monospace blur, and high legibility.
+    * Standardized all headings and titles onto `Manrope` (`Bold`), eliminating distorted/flared letterforms (e.g., quirky 'y' in destination titles from `Bricolage Grotesque`).
+    * Upgraded `labelLarge` to `15.sp` `Manrope Bold` for crisp, well-proportioned button labels.
+  - **Button Layout & Contrast Polish**:
+    * Fixed modifier chaining in `LobbyDetailScreen.kt` where `.height().padding()` had squished internal button content down to 32–36dp. Set `.padding().height(48.dp)` so action buttons maintain full 48dp height with generous vertical breathing room.
+    * Configured explicit high-contrast enabled and disabled button colors on the `Lock lobby` button (`MaterialTheme.colorScheme.primary` with `onPrimary`, and `surfaceVariant` with `onSurfaceVariant(0.6f)` when disabled).
+  - **Foreground Push Notification Suppression**:
+    * Added app lifecycle tracking in `OffCampusApp.kt` via `ActivityLifecycleCallbacks` (`isAppInForeground`).
+    * In `OffCampusFirebaseMessagingService.kt`, suppressed system status-bar heads-up notifications while the app is active in the foreground (`if (OffCampusApp.isAppInForeground) return`), avoiding disruptive popups while user is actively using the app. Notifications now only fire when the app is in the background, closed, or the device screen is locked.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

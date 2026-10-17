@@ -186,7 +186,7 @@ fun LobbyDetailScreen(
                             )
                         }
                         Text(
-                            text = "${current.memberIds.size} / ${current.maxSize} riders",
+                            text = "${current.memberIds.size}/${current.maxSize} riders",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -302,9 +302,9 @@ fun LobbyDetailScreen(
                     shape = RoundedCornerShape(999.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     modifier = Modifier
+                        .padding(top = 16.dp)
                         .fillMaxWidth()
                         .height(48.dp)
-                        .padding(top = 16.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ChatBubble,
@@ -462,8 +462,10 @@ private fun LobbyMasterControls(
             enabled = canLock && !isUpdating,
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -540,9 +542,9 @@ private fun LockedRideBookingCard(
                     contentColor = Color.White
                 ),
                 modifier = Modifier
+                    .padding(top = 10.dp)
                     .fillMaxWidth()
                     .height(48.dp)
-                    .padding(top = 8.dp)
             ) {
                 Text("Ride's done — split the fare", fontWeight = FontWeight.Bold)
             }
@@ -553,9 +555,9 @@ private fun LockedRideBookingCard(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
                     .padding(top = 8.dp)
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
                 Text("Cancel ride / End lobby", fontWeight = FontWeight.SemiBold)
             }
@@ -645,9 +647,9 @@ private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
             contentColor = Color.White
         ),
         modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
             .padding(bottom = 8.dp)
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
         if (opening) {
             CircularProgressIndicator(
