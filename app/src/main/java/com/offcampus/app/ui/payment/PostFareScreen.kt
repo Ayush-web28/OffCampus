@@ -97,7 +97,7 @@ fun PostFareScreen(
                 onValueChange = viewModel::onTotalFareChange,
                 label = { Text("Total fare (₹)") },
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             )
@@ -165,21 +165,21 @@ fun PostFareScreen(
             Button(
                 onClick = { viewModel.submit(onPosted) },
                 enabled = !form.isSubmitting,
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
                     .padding(top = 24.dp)
+                    .height(52.dp)
             ) {
                 if (form.isSubmitting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text("Confirm split", fontWeight = FontWeight.Bold)

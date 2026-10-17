@@ -223,9 +223,9 @@ fun LobbyBrowseScreen(
                         onCreateLobby()
                     }
                 },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Post a trip")
             }

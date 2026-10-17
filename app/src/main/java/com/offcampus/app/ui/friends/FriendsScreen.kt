@@ -268,8 +268,15 @@ private fun IncomingRequestRow(
                 )
             }
         }
-        OutlinedButton(onClick = onDecline) { Text("Decline") }
-        Button(onClick = onAccept, modifier = Modifier.padding(start = 8.dp)) { Text("Accept") }
+        OutlinedButton(
+            onClick = onDecline,
+            shape = RoundedCornerShape(12.dp)
+        ) { Text("Decline") }
+        Button(
+            onClick = onAccept,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.padding(start = 8.dp)
+        ) { Text("Accept") }
     }
 }
 
@@ -305,7 +312,7 @@ private fun FriendRow(
         }
         OutlinedButton(
             onClick = onOpenChat,
-            shape = RoundedCornerShape(999.dp),
+            shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
         ) {
             BadgedBox(

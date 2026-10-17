@@ -301,6 +301,15 @@ A **real bug** did surface, though, the first time this was tested against an ac
 - **Fix 51 — Retain 30-minute forward offset for Create Lobby departure time** (UX adjustment):
   - In `PostTripViewModel.kt`, restored the 30-minute forward offset (`add(Calendar.MINUTE, 30)`) in `defaultDepartureTime()` per user request, defaulting the initial lobby departure time to 30 minutes from the current time while keeping seconds and milliseconds cleanly cleared to 0.
 
+- **Fix 52 — Lloyds Bank Deep Forest Green institutional theme and Inset Grouped card architecture** (UI design redesign):
+  - **Aesthetic Refinement ("Less AI")**: Replaced synthetic/AI-like saturated purple gradients, floaty shadows, and quirky 4dp notched ticket-stub cuts with the calm, institutional, bank-grade aesthetic of the Lloyds Mobile Banking iOS app.
+  - **Color Tokens**:
+    * Light Mode: Deep Forest Green (`#005A36`) primary anchor, crisp pure white cards (`#FFFFFF`) on calm light grey canvas (`#F3F4F6`), subtle 1px hairline borders (`#E5E7EB`), high-contrast slate text (`#0F172A`), warm amber (`#D97706`), and emerald green (`#00724D`).
+    * Dark Mode: Premium OLED slate canvas (`#0B0F14`), elevated dark surfaces (`#161F28`) with hairline borders (`#2A3644`), emerald accents (`#10B981`), and crisp white text.
+    * Maintained backward-compatibility aliases (`LightViolet = LightForestGreen`, `DarkViolet = DarkForestGreen`).
+  - **Card & Component Architecture**: Standardized on 14dp corner radiuses (`medium` / `TicketCardShape`) across `LobbyCard`, `ActiveRideCard`, `PendingPaymentBanner`, `LobbyDetailScreen`, `PostTripScreen`, `PaymentSplitScreen`, `FriendsScreen`, `UserProfileScreen`, and `ProfileScreen`. Added a 1px top hairline divider to `OffCampusBottomBar`.
+  - **Zero Functional Drift**: Preserved 100% of existing behavior, button routes, dialog listeners, active lobby badged chat launcher placement, search suggestions, and Create Lobby fields.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

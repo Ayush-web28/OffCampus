@@ -276,7 +276,7 @@ fun LobbyDetailScreen(
                     viewModel.currentUid in current.memberIds -> OutlinedButton(
                         onClick = viewModel::leave,
                         enabled = !isUpdating,
-                        shape = RoundedCornerShape(999.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
@@ -393,7 +393,7 @@ private fun JoinLobbyButton(isUpdating: Boolean, onClick: () -> Unit) {
     Button(
         onClick = { tapped = true; onClick() },
         enabled = !isUpdating && !tapped,
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             disabledContainerColor = containerColor,
@@ -460,7 +460,7 @@ private fun LobbyMasterControls(
         Button(
             onClick = onLock,
             enabled = canLock && !isUpdating,
-            shape = RoundedCornerShape(999.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = Color.White
@@ -473,7 +473,7 @@ private fun LobbyMasterControls(
         OutlinedButton(
             onClick = { showCancelDialog = true },
             enabled = !isUpdating,
-            shape = RoundedCornerShape(999.dp),
+            shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
             modifier = Modifier
@@ -517,7 +517,7 @@ private fun LockedRideBookingCard(
     }
 
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -534,7 +534,7 @@ private fun LockedRideBookingCard(
             }
             Button(
                 onClick = onSplitFare,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.tertiary,
                     contentColor = Color.White
@@ -549,7 +549,7 @@ private fun LockedRideBookingCard(
 
             OutlinedButton(
                 onClick = { showCancelDialog = true },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier
@@ -573,7 +573,7 @@ private fun CancelledTripCard(
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(it.toDate())
     }
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
     ) {
@@ -610,7 +610,7 @@ private fun CancelledTripCard(
             )
             Button(
                 onClick = onBack,
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -639,7 +639,7 @@ private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
     }
     Button(
         onClick = { opening = true; onOpen() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = Color.White
@@ -665,7 +665,7 @@ private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
 @Composable
 private fun LockedRideInProgressCard() {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -684,7 +684,7 @@ private fun LockedRideInProgressCard() {
 @Composable
 private fun CompletedTripCard(onViewSplit: () -> Unit) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -698,7 +698,7 @@ private fun CompletedTripCard(onViewSplit: () -> Unit) {
             )
             Button(
                 onClick = onViewSplit,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.tertiary,
                     contentColor = Color.White

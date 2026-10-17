@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -55,8 +56,13 @@ private val TABS = listOf(
 @Composable
 fun OffCampusBottomBar(currentRoute: String?, hasFriendsAlert: Boolean, onSelect: (String) -> Unit) {
     val selectedIndex = TABS.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
-    Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surface) {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(80.dp)) {
+    Surface(tonalElevation = 0.dp, color = MaterialTheme.colorScheme.surface) {
+        Column {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(80.dp)) {
             val tabWidth = maxWidth / TABS.size
             val pillWidth = tabWidth - 32.dp
             // Same spring spec Fix 20 already uses for a lobby card's own entrance — reused here
@@ -94,6 +100,7 @@ fun OffCampusBottomBar(currentRoute: String?, hasFriendsAlert: Boolean, onSelect
             }
         }
     }
+}
 }
 
 @Composable

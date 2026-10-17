@@ -63,7 +63,7 @@ fun LocationAutocompleteField(
     label: String,
     placeholder: String,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(16.dp)
+    shape: Shape = RoundedCornerShape(14.dp)
 ) {
     // Dismissed manually (suggestion tapped, or the user taps elsewhere) rather than tied to
     // focus — losing focus by tapping a suggestion row would otherwise close the menu before

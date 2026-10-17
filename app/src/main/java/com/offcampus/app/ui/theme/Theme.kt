@@ -5,20 +5,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
-    primary = LightViolet,
-    onPrimary = LightSurface,
+    primary = LightForestGreen,
+    onPrimary = Color.White,
     primaryContainer = LightPrimaryContainer,
     onPrimaryContainer = LightOnPrimaryContainer,
     secondary = LightAmber,
-    onSecondary = LightSurface,
+    onSecondary = Color.White,
     secondaryContainer = LightSecondaryContainer,
     onSecondaryContainer = LightOnSecondaryContainer,
     tertiary = LightGreen,
-    onTertiary = LightSurface,
+    onTertiary = Color.White,
     tertiaryContainer = LightTertiaryContainer,
-    onTertiaryContainer = LightSurface,
+    onTertiaryContainer = LightOnTertiaryFixed,
     error = LightCoral,
     background = LightBackground,
     onBackground = LightOnBackground,
@@ -31,18 +32,18 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = DarkViolet,
-    onPrimary = DarkBackground,
+    primary = DarkForestGreen,
+    onPrimary = Color(0xFF0B0F14),
     primaryContainer = DarkPrimaryContainer,
     onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkAmber,
-    onSecondary = DarkBackground,
+    onSecondary = Color(0xFF0B0F14),
     secondaryContainer = DarkSecondaryContainer,
     onSecondaryContainer = DarkOnSecondaryContainer,
     tertiary = DarkGreen,
-    onTertiary = DarkBackground,
+    onTertiary = Color(0xFF0B0F14),
     tertiaryContainer = DarkTertiaryContainer,
-    onTertiaryContainer = DarkOnTertiaryFixed,
+    onTertiaryContainer = DarkTertiaryFixed,
     error = DarkCoral,
     background = DarkBackground,
     onBackground = DarkOnBackground,
@@ -55,7 +56,7 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * App-wide theme configured with Stitch "OffCampus Neo-Transit" design tokens.
+ * App-wide theme configured with Lloyds Bank institutional "Deep Forest Green" design tokens.
  */
 @Composable
 fun OffCampusTheme(

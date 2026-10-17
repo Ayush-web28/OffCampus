@@ -90,7 +90,7 @@ fun TripHistoryScreen(
                     val allSettled = row.split.participants.all { it.settled }
                     Card(
                         onClick = { onOpenSplit(row.split.lobbyId) },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.fillMaxWidth()

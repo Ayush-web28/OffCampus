@@ -96,7 +96,7 @@ fun PaymentSplitScreen(
                 .padding(innerPadding)
         ) {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier
@@ -203,18 +203,18 @@ private fun ParticipantRow(
                         settled -> StatusChip("Settled", MaterialTheme.colorScheme.tertiary, showCheckmark = true)
                         senderAck && isPayer -> Button(
                             onClick = onConfirmReceived,
-                            shape = RoundedCornerShape(999.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = Color.White
                             )
                         ) { Text("Confirm received", fontWeight = FontWeight.Bold) }
                         senderAck -> StatusChip("Sent — waiting", MaterialTheme.colorScheme.secondary)
                         participant.userId == currentUid -> Button(
                             onClick = onMarkSent,
-                            shape = RoundedCornerShape(999.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = Color.White
                             )
                         ) { Text("Mark as sent", fontWeight = FontWeight.Bold) }

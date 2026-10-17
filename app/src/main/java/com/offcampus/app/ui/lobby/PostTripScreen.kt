@@ -156,7 +156,7 @@ fun PostTripScreen(
                         false
                     ).show()
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier
@@ -305,12 +305,12 @@ fun PostTripScreen(
                 val isAutoSelected = form.rideType == RideType.AUTO
                 Card(
                     onClick = { viewModel.onRideTypeChange(RideType.AUTO) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isAutoSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                     ),
-                    border = if (isAutoSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = if (isAutoSelected) 2.dp else 0.dp),
+                    border = if (isAutoSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.secondary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     modifier = Modifier
                         .weight(1f)
                         .height(72.dp)
@@ -368,12 +368,12 @@ fun PostTripScreen(
                 val isCabSelected = form.rideType == RideType.CAB
                 Card(
                     onClick = { viewModel.onRideTypeChange(RideType.CAB) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isCabSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                        containerColor = if (isCabSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
                     ),
-                    border = if (isCabSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = if (isCabSelected) 2.dp else 0.dp),
+                    border = if (isCabSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     modifier = Modifier
                         .weight(1f)
                         .height(72.dp)
@@ -438,16 +438,16 @@ fun PostTripScreen(
                 )
             }
 
-            // Post Lobby Primary CTA Button (52dp stadium pill from Stitch)
+            // Post Lobby Primary CTA Button (52dp institutional button)
             Button(
                 onClick = { viewModel.submit(onPosted) },
                 enabled = !form.isSubmitting,
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .fillMaxWidth()
