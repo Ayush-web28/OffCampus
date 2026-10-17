@@ -389,6 +389,15 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * Redesigned `ic_launcher_foreground.xml` with a geometric transit mark: an outbound campus mobility ring with a directional departure arrow and 3 pooled passenger nodes. Added `android:roundIcon` in `AndroidManifest.xml`.
     * Created `OffCampusLogo.kt` (`OffCampusLogoIcon` and `OffCampusBrandHeader`) in `ui/common/` and integrated the brand mark on `AuthScreen.kt`.
 
+- **Fix 62 — Pre-populate start/pickup location in Uber, Ola, and Rapido deep links** (Integration fix):
+  - **Issue**: When a lobby master locked a lobby and tapped Uber, Ola, or Rapido, the destination was pre-filled but the pickup location defaulted to the phone's live GPS position (`pickup=my_location`), overriding the lobby's campus gate/pickup point.
+  - **Fix**:
+    * In `RideBooking.kt`: Added `resolvePickupName` and `resolveCoordinates` to resolve the lobby's gate, checkpoint, and lat/lng coordinates (or campus presets).
+    * Removed `pickup=my_location` from Uber universal link; now passes explicit `pickup[formatted_address]`, `pickup[nickname]`, and `pickup[latitude]`/`pickup[longitude]`, ensuring Uber uses the lobby gate as the starting point.
+    * Extended Ola deep links with `address`, `lat`, `lng`, `drop_address`, `drop_lat`, `drop_lng`, and `category` (`auto` or `compact`).
+    * Extended Rapido deep links with `source`, `destination`, and coordinates.
+    * In `LobbyDetailScreen.kt`: Updated `LockedRideBookingCard` to accept the full `Lobby` object and state `"Pickup set to $pickupName; destination set to ${lobby.destination}."`.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.Rider
 import com.offcampus.app.ui.avatar.AvatarView
@@ -329,7 +330,7 @@ fun LobbyDetailScreen(
                     // calls to make — everyone else just waits for that to happen, same as they
                     // can't lock the lobby in the first place.
                     status == LobbyStatus.LOCKED && isMaster -> LockedRideBookingCard(
-                        destination = current.destination,
+                        lobby = current,
                         onSplitFare = onOpenPostFare,
                         onCancelLobby = { viewModel.cancelLobby(onBack) }
                     )
@@ -576,12 +577,14 @@ private fun LobbyMasterControls(
 
 @Composable
 private fun LockedRideBookingCard(
-    destination: String,
+    lobby: Lobby,
     onSplitFare: () -> Unit,
     onCancelLobby: () -> Unit
 ) {
     val context = LocalContext.current
     var showCancelDialog by remember { mutableStateOf(false) }
+    val pickupName = remember(lobby) { resolvePickupName(lobby.checkpoint, lobby.gate) }
+    val links = remember(lobby) { rideBookingLinks(lobby) }
 
     if (showCancelDialog) {
         AlertDialog(
@@ -615,12 +618,12 @@ private fun LockedRideBookingCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Lobby locked — book the ride", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Pickup uses your current location in each app; drop-off is passed as a text hint, not an exact pin.",
+                "Pickup set to $pickupName; destination set to ${lobby.destination}.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
-            rideBookingLinks(destination).forEach { link ->
+            links.forEach { link ->
                 RideBookingButton(link = link, onOpen = { openRideBookingLink(context, link) })
             }
             Button(
