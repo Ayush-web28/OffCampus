@@ -1,6 +1,8 @@
 package com.offcampus.app.ui.lobby
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.SharedPreferences
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -57,7 +59,17 @@ data class LobbyFilters(
     val sort: SortOption = SortOption.NEWEST
 )
 
-class LobbyBrowseViewModel : ViewModel() {
+class LobbyBrowseViewModel(application: Application) : AndroidViewModel(application) {
+    private val prefs: SharedPreferences =
+        application.getSharedPreferences("offcampus_lobby_prefs", Application.MODE_PRIVATE)
+    private val acknowledgedExpiredLobbyIds: MutableSet<String> =
+        (prefs.getStringSet("acknowledged_expired_lobbies", emptySet()) ?: emptySet()).toMutableSet()
+
+    private val _expiredLobbyAlert = MutableStateFlow<Lobby?>(null)
+    val expiredLobbyAlert: StateFlow<Lobby?> = _expiredLobbyAlert.asStateFlow()
+
+    private val _userLobbies = MutableStateFlow<List<Lobby>>(emptyList())
+
     private val uid: String? get() = Firebase.auth.currentUser?.uid
 
     // Raw, unfiltered lobbies straight from Firestore.
@@ -145,6 +157,7 @@ class LobbyBrowseViewModel : ViewModel() {
         pendingPaymentJob?.cancel()
         _friendIds.value = emptySet()
         _activeLobby.value = null
+        _userLobbies.value = emptyList()
         _asParticipantSplits.value = emptyList()
         _asPayerSplits.value = emptyList()
         _pendingPayment.value = null
@@ -155,11 +168,11 @@ class LobbyBrowseViewModel : ViewModel() {
         activeLobbyListener = FirebaseRefs.lobbies
             .whereArrayContains("memberIds", id)
             .addSnapshotListener { snapshot, _ ->
-                val active = snapshot?.documents
+                val lobbies = snapshot?.documents
                     ?.mapNotNull { doc -> doc.toObject(Lobby::class.java)?.copy(id = doc.id) }
-                    ?.filter { it.status == LobbyStatus.OPEN || it.status == LobbyStatus.LOCKED }
-                    ?.maxByOrNull { it.departureTime.seconds }
-                _activeLobby.value = active
+                    ?: emptyList()
+                _userLobbies.value = lobbies
+                processUserLobbies(lobbies, System.currentTimeMillis())
             }
         paymentParticipantListener = FirebaseRefs.paymentSplits
             .whereArrayContains("participantIds", id)
@@ -177,6 +190,46 @@ class LobbyBrowseViewModel : ViewModel() {
                     ?: emptyList()
                 recomputePendingPayment(id)
             }
+    }
+
+    private fun processUserLobbies(userLobbies: List<Lobby>, nowMs: Long) {
+        // 1. Any OPEN lobby belonging to the user that exceeded departure + 1 min without being locked
+        // is auto-cancelled in Firestore
+        userLobbies.filter { it.status == LobbyStatus.OPEN && it.isAutoExpired(nowMs) }.forEach { expiredLobby ->
+            viewModelScope.launch {
+                try {
+                    FirebaseRefs.lobbies.document(expiredLobby.id).update(
+                        mapOf(
+                            "status" to LobbyStatus.CANCELLED.name,
+                            "cancelReason" to Lobby.CANCEL_REASON_AUTO_EXPIRED
+                        )
+                    ).await()
+                } catch (_: Exception) {}
+            }
+        }
+
+        // 2. Active lobby is only OPEN (non-expired) or LOCKED
+        val active = userLobbies
+            .filter { (it.status == LobbyStatus.OPEN && !it.isAutoExpired(nowMs)) || it.status == LobbyStatus.LOCKED }
+            .maxByOrNull { it.departureTime.seconds }
+        _activeLobby.value = active
+
+        // 3. Inform user of unacknowledged auto-expired lobbies within the last 24 hours
+        val unacknowledged = userLobbies.firstOrNull { lobby ->
+            lobby.isAutoExpired(nowMs) &&
+                (lobby.status == LobbyStatus.CANCELLED || lobby.status == LobbyStatus.OPEN) &&
+                lobby.id !in acknowledgedExpiredLobbyIds &&
+                nowMs - lobby.departureTime.toDate().time < 24 * 60 * 60 * 1000L
+        }
+        if (unacknowledged != null && _expiredLobbyAlert.value == null) {
+            _expiredLobbyAlert.value = unacknowledged
+        }
+    }
+
+    fun dismissExpiredLobbyAlert(lobbyId: String) {
+        _expiredLobbyAlert.value = null
+        acknowledgedExpiredLobbyIds.add(lobbyId)
+        prefs.edit().putStringSet("acknowledged_expired_lobbies", acknowledgedExpiredLobbyIds).apply()
     }
 
     private fun recomputePendingPayment(userId: String) {
@@ -251,15 +304,12 @@ class LobbyBrowseViewModel : ViewModel() {
         _friendLobbyNotification.value = null
     }
 
-    // Ticks once immediately, then every minute — purely to force visibleLobbies to re-evaluate
-    // staleness (see STALE_AFTER_MS below) as real time passes, not just when Firestore data
-    // actually changes. Without this, a lobby crossing the 24-hour mark while a rider is sitting
-    // on the Lobbies screen with no new snapshot arriving would stay visible until *something*
-    // else happened to trigger a recompute.
+    // Ticks once immediately, then every 10 seconds — to evaluate auto-expiration and staleness
+    // as real time passes, not just when Firestore data changes.
     private val nowTicker = flow {
         while (true) {
             emit(System.currentTimeMillis())
-            delay(60_000)
+            delay(10_000)
         }
     }
 
@@ -268,9 +318,11 @@ class LobbyBrowseViewModel : ViewModel() {
     // over, instead of us re-running it in every setter.
     val visibleLobbies: StateFlow<List<Lobby>> =
         combine(_lobbies, _filters, _friendIds, _queryLocation, nowTicker) { lobbies, filters, friendIds, queryLocation, now ->
+            processUserLobbies(_userLobbies.value, now)
             lobbies
                 .filter { lobby ->
                     !isStale(lobby, now) &&
+                        !lobby.isAutoExpired(now) &&
                         (filters.rideType == null || lobby.rideType == filters.rideType) &&
                         (!filters.friendsOnly || lobby.createdBy in friendIds) &&
                         matchesDestination(lobby, filters.destinationQuery, queryLocation)
@@ -287,7 +339,7 @@ class LobbyBrowseViewModel : ViewModel() {
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val hasAnyLobbies: StateFlow<Boolean> = combine(_lobbies, nowTicker) { lobbies, now ->
-        lobbies.any { !isStale(it, now) }
+        lobbies.any { !isStale(it, now) && !it.isAutoExpired(now) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** A lobby that's been sitting OPEN for more than [STALE_AFTER_MS] since it was created is

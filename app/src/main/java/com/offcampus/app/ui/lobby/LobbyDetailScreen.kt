@@ -252,7 +252,11 @@ fun LobbyDetailScreen(
             Crossfade(targetState = current.status, label = "lobbyStatus", modifier = Modifier.padding(top = 24.dp)) { status ->
                 val isMaster = viewModel.currentUid == current.createdBy
                 when {
-                    status == LobbyStatus.CANCELLED -> CancelledTripCard(onBack = onBack)
+                    status == LobbyStatus.CANCELLED -> CancelledTripCard(
+                        isAutoExpired = current.isAutoExpired(),
+                        departureTime = current.departureTime,
+                        onBack = onBack
+                    )
                     status == LobbyStatus.COMPLETED -> CompletedTripCard(onViewSplit = onOpenPaymentSplit)
                     // Booking the ride and ending it (splitting the fare) are the lobby master's
                     // calls to make — everyone else just waits for that to happen, same as they
@@ -560,7 +564,14 @@ private fun LockedRideBookingCard(
 }
 
 @Composable
-private fun CancelledTripCard(onBack: () -> Unit) {
+private fun CancelledTripCard(
+    isAutoExpired: Boolean = false,
+    departureTime: com.google.firebase.Timestamp? = null,
+    onBack: () -> Unit
+) {
+    val formattedTime = departureTime?.let {
+        SimpleDateFormat("h:mm a", Locale.getDefault()).format(it.toDate())
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -577,14 +588,22 @@ private fun CancelledTripCard(onBack: () -> Unit) {
                 modifier = Modifier.size(44.dp)
             )
             Text(
-                "This lobby was cancelled",
+                if (isAutoExpired) "Lobby Automatically Cancelled" else "This lobby was cancelled",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                "The lobby master cancelled this trip before the ride finished.",
+                if (isAutoExpired) {
+                    if (formattedTime != null) {
+                        "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time ($formattedTime)."
+                    } else {
+                        "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                    }
+                } else {
+                    "The lobby master cancelled this trip before the ride finished."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp, bottom = 18.dp)

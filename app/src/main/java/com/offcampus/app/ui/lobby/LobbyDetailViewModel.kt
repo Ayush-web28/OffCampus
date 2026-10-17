@@ -11,6 +11,7 @@ import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.Rider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +41,9 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         listener = FirebaseRefs.lobbies.document(lobbyId).addSnapshotListener { snapshot, _ ->
             val lobby = snapshot?.toObject(Lobby::class.java)?.copy(id = snapshot.id)
             _lobby.value = lobby
+            if (lobby != null && lobby.status == LobbyStatus.OPEN && lobby.isAutoExpired()) {
+                autoCancelLobby()
+            }
             // Avoids re-fetching all member profiles on every snapshot (e.g. a lock/status
             // change) when the member list itself hasn't actually changed.
             val memberIds = lobby?.memberIds ?: emptyList()
@@ -47,6 +51,29 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
                 lastLoadedMemberIds = memberIds
                 loadMembers(memberIds)
             }
+        }
+
+        viewModelScope.launch {
+            while (true) {
+                delay(5_000)
+                val current = _lobby.value
+                if (current != null && current.status == LobbyStatus.OPEN && current.isAutoExpired()) {
+                    autoCancelLobby()
+                }
+            }
+        }
+    }
+
+    private fun autoCancelLobby() {
+        viewModelScope.launch {
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update(
+                    mapOf(
+                        "status" to LobbyStatus.CANCELLED.name,
+                        "cancelReason" to Lobby.CANCEL_REASON_AUTO_EXPIRED
+                    )
+                ).await()
+            } catch (_: Exception) {}
         }
     }
 

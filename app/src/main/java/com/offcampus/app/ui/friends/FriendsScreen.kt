@@ -161,7 +161,7 @@ fun FriendsScreen(
 
         item {
             Text(
-                "Your friends",
+                "Friends (${friends.size})",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 20.dp, bottom = 8.dp)
             )

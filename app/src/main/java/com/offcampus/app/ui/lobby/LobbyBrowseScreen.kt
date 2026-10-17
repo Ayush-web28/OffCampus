@@ -25,8 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import java.text.SimpleDateFormat
+import java.util.Locale
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,6 +85,7 @@ fun LobbyBrowseScreen(
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
     val friendLobbyNotification by viewModel.friendLobbyNotification.collectAsStateWithLifecycle()
+    val expiredLobbyAlert by viewModel.expiredLobbyAlert.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -171,6 +175,35 @@ fun LobbyBrowseScreen(
                             Text("Leave & post new", fontWeight = FontWeight.Bold)
                         }
                     }
+                }
+            }
+        )
+    }
+
+    if (expiredLobbyAlert != null) {
+        val expired = expiredLobbyAlert!!
+        val formattedTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(expired.departureTime.toDate())
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissExpiredLobbyAlert(expired.id) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = { Text("Lobby Cancelled", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Your lobby to ${expired.destination} scheduled for $formattedTime was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.dismissExpiredLobbyAlert(expired.id) }
+                ) {
+                    Text("Got it")
                 }
             }
         )

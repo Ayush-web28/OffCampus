@@ -150,12 +150,16 @@ service cloud.firestore {
         && request.auth.uid == resource.data.createdBy;
     }
 
-    // Lobby master can cancel an OPEN or LOCKED lobby before the ride finishes
+    // Lobby master can cancel an OPEN or LOCKED lobby before the ride finishes,
+    // or any rider can trigger auto-cancellation for an OPEN lobby that passed its departure time.
     function isCancellingLobby() {
-      return onlyFieldChanged('status')
+      return (onlyFieldChanged('status') || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelReason']))
         && resource.data.status in ['OPEN', 'LOCKED']
         && request.resource.data.status == 'CANCELLED'
-        && request.auth.uid == resource.data.createdBy;
+        && (
+          request.auth.uid == resource.data.createdBy
+          || (resource.data.status == 'OPEN' && request.time > resource.data.departureTime)
+        );
     }
 
     // ---------------------------------------------------------------------

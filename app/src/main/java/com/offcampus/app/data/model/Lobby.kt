@@ -27,5 +27,19 @@ data class Lobby(
     val memberIds: List<String> = emptyList(),
     val status: LobbyStatus = LobbyStatus.OPEN,
     val createdBy: String = "",
-    val createdAt: Timestamp = Timestamp.now()
-)
+    val createdAt: Timestamp = Timestamp.now(),
+    val cancelReason: String? = null
+) {
+    companion object {
+        const val CANCEL_REASON_AUTO_EXPIRED = "AUTO_EXPIRED"
+        const val EXPIRATION_GRACE_MS = 60_000L
+    }
+
+    /** Returns true if this lobby has passed its departure time + 1 minute without being locked,
+     * or was already cancelled due to expiration. */
+    fun isAutoExpired(nowMs: Long = System.currentTimeMillis()): Boolean {
+        val expireThreshold = departureTime.toDate().time + EXPIRATION_GRACE_MS
+        return (status == LobbyStatus.OPEN && nowMs >= expireThreshold) ||
+               (status == LobbyStatus.CANCELLED && cancelReason == CANCEL_REASON_AUTO_EXPIRED)
+    }
+}
