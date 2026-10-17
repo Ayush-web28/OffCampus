@@ -9,6 +9,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.observeSignedInUid
 import com.offcampus.app.data.model.FriendRequest
 import com.offcampus.app.data.model.FriendRequestStatus
@@ -196,6 +197,10 @@ class FriendsViewModel : ViewModel() {
                 ).await()
                 _addFriendState.value = AddFriendState(successMessage = "Friend request sent to ${target.name}.")
                 scheduleMessageDismiss()
+                NotificationService.notifyFriendRequest(
+                    recipientId = target.id,
+                    senderName = myRider?.name ?: "Someone"
+                )
             } catch (e: Exception) {
                 fail(e.localizedMessage ?: "Couldn't send that request. Try again.")
             }

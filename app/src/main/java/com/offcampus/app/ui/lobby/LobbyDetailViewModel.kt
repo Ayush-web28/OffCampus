@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
 import com.offcampus.app.data.model.Rider
@@ -97,7 +98,41 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         }
     }
 
-    fun join() = updateMembers { FieldValue.arrayUnion(it) }
+    fun join() {
+        val uid = currentUid ?: return
+        val currentLobby = _lobby.value ?: return
+        viewModelScope.launch {
+            _isUpdating.value = true
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayUnion(uid)).await()
+                // Fetch joiner's name to construct push notification
+                val currentRider = FirebaseRefs.riders.document(uid).get().await().toObject(Rider::class.java)
+                val joinerName = currentRider?.name ?: "A rider"
+                // 1. Notify lobby master
+                if (currentLobby.createdBy != uid) {
+                    NotificationService.notifyRiderJoinedLobby(
+                        masterId = currentLobby.createdBy,
+                        joinerName = joinerName,
+                        destination = currentLobby.destination,
+                        lobbyId = lobbyId
+                    )
+                }
+                // 2. Notify all if lobby is now full
+                val newCount = currentLobby.memberIds.size + 1
+                if (newCount >= currentLobby.maxSize) {
+                    NotificationService.notifyLobbyFull(
+                        memberIds = currentLobby.memberIds + uid,
+                        destination = currentLobby.destination,
+                        lobbyId = lobbyId
+                    )
+                }
+            } catch (_: Exception) {
+            } finally {
+                _isUpdating.value = false
+            }
+        }
+    }
+
     fun leave() = updateMembers { FieldValue.arrayRemove(it) }
 
     /** Master can remove a member from the lobby (cannot remove themselves). */
@@ -109,6 +144,12 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
             _isUpdating.value = true
             try {
                 FirebaseRefs.lobbies.document(lobbyId).update("memberIds", FieldValue.arrayRemove(riderId)).await()
+                // 3a. Notify removed rider
+                NotificationService.notifyRiderRemoved(
+                    riderId = riderId,
+                    destination = currentLobby.destination,
+                    lobbyId = lobbyId
+                )
             } catch (e: Exception) {
                 // Safe catch prevents crash on unexpected network/permission issues
             } finally {

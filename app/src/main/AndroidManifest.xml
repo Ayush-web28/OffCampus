@@ -3,6 +3,7 @@
 
     <!-- Needed for every Firestore/Auth call and for opening Uber/Ola/Rapido via deep link. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".OffCampusApp"
@@ -41,6 +42,14 @@
                     android:pathPrefix="/finishSignIn" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".data.OffCampusFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

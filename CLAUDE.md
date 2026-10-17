@@ -269,6 +269,17 @@ A **real bug** did surface, though, the first time this was tested against an ac
      - Added a modal `AlertDialog` on the main lobby browse screen (`LobbyBrowseScreen.kt`) alerting the master and riders when their lobby is cancelled due to expiration.
      - Updated `LobbyDetailScreen.kt`'s `CancelledTripCard` to clearly inform riders that the lobby was automatically cancelled because it wasn't locked within 1 minute past departure time.
 
+- **Fix 47 — Push notifications via Cloudflare Worker and FCM HTTP v1** (free-tier notification system):
+  - Retained 100% free-tier architecture without requiring paid Firebase Blaze plan or Cloud Functions.
+  - Implemented `/notify` endpoint in Cloudflare Worker (`worker/src/index.js`) using WebCrypto RS256 JWT assertions and Google OAuth2 bearer token exchange to dispatch messages to the FCM HTTP v1 API (`https://fcm.googleapis.com/v1/projects/offcampus-5f370/messages:send`).
+  - Added `firebase-messaging` SDK to `app/build.gradle.kts`, `POST_NOTIFICATIONS` permission to `AndroidManifest.xml`, and runtime permission request on Android 13+ in `MainActivity.kt`.
+  - Created `OffCampusFirebaseMessagingService.kt` to handle FCM token refreshes and render system notifications with deep links.
+  - Created `NotificationService.kt` to sync device FCM tokens to `Rider.fcmToken` in Firestore and dispatch notifications for:
+    1. Lobby master when a new rider joins (`LobbyDetailViewModel.kt`).
+    2. Riders and lobby master when a lobby becomes full (`LobbyDetailViewModel.kt`).
+    3. User when removed from a lobby (`LobbyDetailViewModel.kt`), when receiving a new friend request (`FriendsViewModel.kt`, `UserProfileViewModel.kt`), or when blocked (`UserProfileViewModel.kt`).
+    4. Chat notifications for group lobby chat and 1:1 friend chat (`ChatViewModel.kt`).
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

@@ -43,6 +43,10 @@ async function route(request, env) {
   if (pathname.startsWith("/photo/") && request.method === "GET") {
     return getPhoto(env, pathname.slice("/photo/".length));
   }
+  if (pathname === "/notify" && request.method === "POST") {
+    await authenticate(request, env);
+    return sendNotification(request, env);
+  }
   throw new HttpError(404, "Not found");
 }
 
@@ -82,6 +86,136 @@ const keyFor = (uid) => `photo:${uid}`;
 function looksLikeJpeg(buffer) {
   const b = new Uint8Array(buffer, 0, 3);
   return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+}
+
+// ---------------------------------------------------------------------------------------------
+// FCM Push Notification dispatcher using service account OAuth 2.0 (HTTP v1 API)
+// ---------------------------------------------------------------------------------------------
+
+let cachedFcmToken = null;
+let cachedFcmTokenExpiresAt = 0;
+
+function bytesToBase64Url(bytes) {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+async function getFcmAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedFcmToken && now < cachedFcmTokenExpiresAt - 300) {
+    return cachedFcmToken;
+  }
+
+  const saRaw = await env.PHOTOS.get("config:sa");
+  if (!saRaw) throw new HttpError(500, "Service account not configured in KV");
+  const sa = JSON.parse(saRaw);
+
+  const pem = sa.private_key;
+  const binaryDerString = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s+/g, "");
+  const binary = atob(binaryDerString);
+  const binaryDer = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) binaryDer[i] = binary.charCodeAt(i);
+
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const header = bytesToBase64Url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const payload = bytesToBase64Url(new TextEncoder().encode(JSON.stringify({
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now
+  })));
+
+  const unsignedToken = `${header}.${payload}`;
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  const signedJwt = `${unsignedToken}.${bytesToBase64Url(new Uint8Array(signature))}`;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: signedJwt
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.access_token) {
+    console.error("OAuth token fetch failed:", data);
+    throw new HttpError(500, "Failed to get FCM access token");
+  }
+
+  cachedFcmToken = data.access_token;
+  cachedFcmTokenExpiresAt = now + (data.expires_in || 3600);
+  return cachedFcmToken;
+}
+
+async function sendNotification(request, env) {
+  const body = await request.json();
+  const { tokens, title, body: msgBody, data = {} } = body;
+  if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+    return json({ ok: true, sent: 0 });
+  }
+
+  const accessToken = await getFcmAccessToken(env);
+  const projectId = env.FIREBASE_PROJECT_ID || "offcampus-5f370";
+  const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+  let sentCount = 0;
+  await Promise.all(
+    tokens.filter(t => typeof t === "string" && t.length > 10).map(async (token) => {
+      try {
+        const payload = {
+          message: {
+            token: token,
+            notification: {
+              title: title || "OffCampus",
+              body: msgBody || ""
+            },
+            data: Object.fromEntries(
+              Object.entries(data).map(([k, v]) => [k, String(v ?? "")])
+            )
+          }
+        };
+
+        const res = await fetch(fcmUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) sentCount++;
+      } catch (e) {
+        console.error("FCM send error:", e);
+      }
+    })
+  );
+
+  return json({ ok: true, sent: sentCount });
 }
 
 // ---------------------------------------------------------------------------------------------

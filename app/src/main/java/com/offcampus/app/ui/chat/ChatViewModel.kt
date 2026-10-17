@@ -8,7 +8,9 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.model.ChatMessage
+import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.Rider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -91,6 +93,40 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
                 FirebaseRefs.chats.document(chatId).collection("messages")
                     .add(ChatMessage(senderId = id, text = trimmed, timestamp = Timestamp.now()))
                     .await()
+
+                val senderName = nameCache[id] ?: try {
+                    FirebaseRefs.riders.document(id).get().await()
+                        .toObject(Rider::class.java)?.name?.ifBlank { null }
+                } catch (_: Exception) { null } ?: "Rider"
+
+                if (chatId.contains("_")) {
+                    val uids = chatId.split("_")
+                    val recipientId = uids.firstOrNull { it != id } ?: ""
+                    if (recipientId.isNotBlank()) {
+                        NotificationService.notifyFriendChat(
+                            recipientId = recipientId,
+                            senderName = senderName,
+                            messageText = trimmed,
+                            chatId = chatId
+                        )
+                    }
+                } else {
+                    try {
+                        val lobbyDoc = FirebaseRefs.lobbies.document(chatId).get().await()
+                        val lobby = lobbyDoc.toObject(Lobby::class.java)
+                        if (lobby != null) {
+                            val destination = lobby.destination.ifBlank { "Lobby" }
+                            NotificationService.notifyLobbyChat(
+                                memberIds = lobby.memberIds,
+                                senderId = id,
+                                senderName = senderName,
+                                destination = destination,
+                                messageText = trimmed,
+                                lobbyId = chatId
+                            )
+                        }
+                    } catch (_: Exception) {}
+                }
             } catch (e: Exception) {
                 // The message just won't appear — the input keeps whatever the caller does with
                 // it (ChatScreen clears the field optimistically since retry-by-retyping is fine here).

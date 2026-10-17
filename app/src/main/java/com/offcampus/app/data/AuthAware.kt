@@ -33,6 +33,9 @@ fun observeSignedInUid(onUidChange: (uid: String?) -> Unit): FirebaseAuth.AuthSt
         val uid = auth.currentUser?.uid
         if (uid != lastUid) {
             lastUid = uid
+            if (uid != null) {
+                NotificationService.registerDeviceToken()
+            }
             onUidChange(uid)
         }
     }

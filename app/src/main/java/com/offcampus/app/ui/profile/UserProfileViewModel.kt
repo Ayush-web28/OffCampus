@@ -6,6 +6,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
 import com.offcampus.app.data.FirebaseRefs
+import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.model.FriendRequest
 import com.offcampus.app.data.model.FriendRequestStatus
 import com.offcampus.app.data.model.Rider
@@ -126,6 +127,11 @@ class UserProfileViewModel(private val targetUserId: String) : ViewModel() {
                     FirebaseRefs.friendRequests.add(
                         FriendRequest(fromUserId = uid, toUserId = target.id, status = FriendRequestStatus.PENDING)
                     ).await()
+                    try {
+                        val myDoc = FirebaseRefs.riders.document(uid).get().await()
+                        val myName = myDoc.toObject(Rider::class.java)?.name?.ifBlank { null } ?: "Someone"
+                        NotificationService.notifyFriendRequest(target.id, myName)
+                    } catch (_: Exception) {}
                 }
 
                 _uiState.update {
@@ -207,6 +213,12 @@ class UserProfileViewModel(private val targetUserId: String) : ViewModel() {
                     for (doc in incoming.documents) {
                         doc.reference.delete().await()
                     }
+                } catch (_: Exception) {}
+
+                try {
+                    val myDoc = FirebaseRefs.riders.document(uid).get().await()
+                    val myName = myDoc.toObject(Rider::class.java)?.name?.ifBlank { null } ?: "Someone"
+                    NotificationService.notifyUserBlocked(target.id, myName)
                 } catch (_: Exception) {}
 
                 _uiState.update {

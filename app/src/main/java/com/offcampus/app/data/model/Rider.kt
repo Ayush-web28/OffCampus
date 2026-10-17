@@ -23,5 +23,6 @@ data class Rider(
     val ratingAverage: Double = 0.0,
     val ratingCount: Int = 0,
     val friendIds: List<String> = emptyList(),
-    val blockedUserIds: List<String> = emptyList()
+    val blockedUserIds: List<String> = emptyList(),
+    val fcmToken: String = ""
 )
