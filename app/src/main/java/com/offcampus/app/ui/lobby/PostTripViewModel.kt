@@ -23,7 +23,8 @@ import java.util.Calendar
 import java.util.Date
 
 private fun defaultDepartureTime(): Date = Calendar.getInstance().apply {
-    add(Calendar.MINUTE, 30)
+    set(Calendar.SECOND, 0)
+    set(Calendar.MILLISECOND, 0)
 }.time
 
 // A real auto-rickshaw is licensed for 3 passengers, full stop — a cab (sedan/SUV) has real

@@ -107,7 +107,7 @@ fun PostTripScreen(
                 value = form.checkpoint,
                 onValueChange = viewModel::onCheckpointChange,
                 label = { Text("Checkpoint") },
-                placeholder = { Text("Main Campus") },
+                placeholder = { Text("Gate 2 or Pickup Point") },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 trailingIcon = clearableTrailingIcon(form.checkpoint) { viewModel.onCheckpointChange("") },
@@ -123,7 +123,7 @@ fun PostTripScreen(
                 onValueChange = viewModel::onGateChange,
                 onSuggestionSelected = viewModel::onGateSuggestionSelected,
                 label = "Location",
-                placeholder = "Gate 2 or pickup point",
+                placeholder = "Main Campus",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp)
@@ -136,7 +136,7 @@ fun PostTripScreen(
                 onValueChange = viewModel::onDestinationChange,
                 onSuggestionSelected = viewModel::onDestinationSuggestionSelected,
                 label = "Destination",
-                placeholder = "HSR Layout, BKC...",
+                placeholder = "BKC, Thane Station, Airport T2...",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 18.dp)

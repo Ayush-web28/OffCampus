@@ -291,6 +291,13 @@ A **real bug** did surface, though, the first time this was tested against an ac
   2. Integrated place search suggestions into lobby screen destination search: `LobbyBrowseViewModel.kt` exposes `searchSuggestions` populated by instant local presets (including newly added Thane Station East/West and transit hubs in `PlaceSearchService.kt`) and debounced Photon geocoder results. `LobbyBrowseScreen.kt` now renders `LocationAutocompleteField` with an interactive dropdown for suggestions (e.g. typing "thane" displays "Thane Station (West)", "Thane Station (East)", etc.).
   3. Removed the "Past rides" header button from `LobbyBrowseScreen.kt`, decluttering the lobbies screen since trip history is already directly accessible from the Profile tab.
 
+- **Fix 50 — Real-time departure time default and refreshed input placeholders for Create Lobby** (UI/UX refinement):
+  1. Default departure time always reflects current live time: In `PostTripViewModel.kt`, removed the previous +30 minute offset from `defaultDepartureTime()`, configuring `departureTime` to initialize directly to `Calendar.getInstance()` (current time with seconds/milliseconds cleared). When opening the "Create Lobby" screen, it now always defaults to the current time (e.g. "Today, 1:23 PM") rather than an offset future time.
+  2. Refreshed Create Lobby input placeholders in `PostTripScreen.kt`:
+     - **Checkpoint**: Updated placeholder to `"Gate 2 or Pickup Point"`.
+     - **Location**: Updated placeholder to `"Main Campus"`.
+     - **Destination**: Replaced outdated Bengaluru reference (`"HSR Layout, BKC..."`) with Mumbai student transit presets (`"BKC, Thane Station, Airport T2..."`).
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
