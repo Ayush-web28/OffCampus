@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -315,34 +314,29 @@ private fun FriendRow(
             shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
         ) {
-            BadgedBox(
-                badge = {
-                    if (hasUnreadChat || unreadChatCount > 0) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ) {
-                            if (unreadChatCount > 0) {
-                                Text(
-                                    text = if (unreadChatCount > 9) "9+" else "$unreadChatCount",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Forum,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text("Chat", fontWeight = FontWeight.SemiBold)
+                if (hasUnreadChat || unreadChatCount > 0) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) {
+                        if (unreadChatCount > 0) {
+                            Text(
+                                text = if (unreadChatCount > 9) "9+" else "$unreadChatCount",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
-                }
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Forum,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text("Chat", fontWeight = FontWeight.SemiBold)
                 }
             }
         }

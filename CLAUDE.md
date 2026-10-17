@@ -342,6 +342,13 @@ A **real bug** did surface, though, the first time this was tested against an ac
     5. In `LobbyDetailScreen.kt` and `OffCampusNavHost.kt`, wired `hasUnreadChat` and `unreadChatCount` to show an unread badge on the "Open lobby chat" button.
     6. Added warning logging to `UnreadActivityViewModel.kt` for listener errors.
 
+- **Fix 56 — Chat button unread count badge alignment fix** (UI layout fix):
+  - Fixed an issue where the red unread message badge (e.g. `[1]`) was superimposed directly on top of the "Chat" text in friend list rows (`FriendRow`), obscuring the letters "at".
+  - **Root Cause**: `OutlinedButton` wrapped `Row(Icon, Text("Chat"))` inside a `BadgedBox`. In Material 3, `BadgedBox` aligns the badge to the top-end corner of its anchor content with a default negative offset (`-4.dp`). Because the anchor content ended at the text "Chat", the badge was drawn directly over the text characters.
+  - **Resolution**:
+    - In `FriendsScreen.kt`, removed `BadgedBox` and placed `Badge` directly inline inside the `Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp))`: `[Icon] -> Text("Chat") -> Badge`. The badge now cleanly follows the text with a 6dp gap without ever obscuring the label.
+    - Standardized `LobbyDetailScreen.kt`'s "Open lobby chat" button with the same inline badge layout, preventing badge overlap on lobby chat buttons as well.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 
