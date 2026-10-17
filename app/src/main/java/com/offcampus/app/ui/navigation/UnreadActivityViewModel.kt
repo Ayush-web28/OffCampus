@@ -36,6 +36,8 @@ class UnreadActivityViewModel : ViewModel() {
     private var lobbiesListener: ListenerRegistration? = null
     private var authListener: FirebaseAuth.AuthStateListener? = null
 
+    private var currentUserId: String? = null
+
     // One watcher per relevant chat id, added or torn down as the relevant set changes (a friend
     // removed, a lobby left) so no listener outlives its reason to exist.
     private val chatWatchers = mutableMapOf<String, ChatWatcher>()
@@ -49,6 +51,7 @@ class UnreadActivityViewModel : ViewModel() {
     }
 
     private fun attachListeners(id: String?) {
+        currentUserId = id
         riderListener?.remove()
         lobbiesListener?.remove()
         chatWatchers.values.forEach { it.remove() }
@@ -59,7 +62,11 @@ class UnreadActivityViewModel : ViewModel() {
         _unreadCounts.value = emptyMap()
         if (id == null) return
 
-        riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, _ ->
+        riderListener = FirebaseRefs.riders.document(id).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                android.util.Log.w("UnreadActivityVM", "Error listening to rider $id: ${error.message}")
+                return@addSnapshotListener
+            }
             val friendIds = snapshot?.toObject(Rider::class.java)?.friendIds ?: emptyList()
             syncWatchedChats(friendChatIds = friendIds.map { friendChatId(id, it) })
         }
@@ -67,7 +74,11 @@ class UnreadActivityViewModel : ViewModel() {
         // PostTripViewModel), so this one query covers both "created" and "joined".
         lobbiesListener = FirebaseRefs.lobbies
             .whereArrayContains("memberIds", id)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    android.util.Log.w("UnreadActivityVM", "Error listening to member lobbies for $id: ${error.message}")
+                    return@addSnapshotListener
+                }
                 syncWatchedChats(lobbyChatIds = snapshot?.documents?.map { it.id } ?: emptyList())
             }
     }
@@ -80,7 +91,7 @@ class UnreadActivityViewModel : ViewModel() {
     ) {
         lastFriendChatIds = friendChatIds
         lastLobbyChatIds = lobbyChatIds
-        val id = uid ?: return
+        val id = currentUserId ?: uid ?: return
         val relevant = (friendChatIds + lobbyChatIds).toSet()
 
         (chatWatchers.keys - relevant).forEach { staleId -> chatWatchers.remove(staleId)?.remove() }
@@ -112,31 +123,57 @@ class UnreadActivityViewModel : ViewModel() {
     }
 }
 
+private data class WatchedMessage(
+    val senderId: String,
+    val timestamp: Timestamp
+)
+
 /** Watches one chat's recent messages and this rider's own read marker for it, calculating
  * the exact unread message count. */
-private class ChatWatcher(uid: String, chatId: String, private val onChange: () -> Unit) {
-    private var messageTimestamps: List<Timestamp> = emptyList()
+private class ChatWatcher(private val uid: String, private val chatId: String, private val onChange: () -> Unit) {
+    private var recentMessages: List<WatchedMessage> = emptyList()
     private var lastReadAt: Timestamp? = null
 
     private val messageListener = FirebaseRefs.chats.document(chatId).collection("messages")
         .orderBy("timestamp", Query.Direction.DESCENDING)
         .limit(20)
-        .addSnapshotListener { snapshot, _ ->
-            messageTimestamps = snapshot?.documents?.mapNotNull { it.getTimestamp("timestamp") } ?: emptyList()
+        .addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                android.util.Log.w("UnreadActivityVM", "Error listening to messages in chat $chatId: ${error.message}")
+                return@addSnapshotListener
+            }
+            recentMessages = snapshot?.documents?.mapNotNull { doc ->
+                val senderId = doc.getString("senderId") ?: ""
+                val ts = doc.getTimestamp("timestamp") ?: return@mapNotNull null
+                WatchedMessage(senderId = senderId, timestamp = ts)
+            } ?: emptyList()
             onChange()
         }
 
     private val readListener = FirebaseRefs.riders.document(uid).collection("chatReads")
         .document(chatId)
-        .addSnapshotListener { snapshot, _ ->
+        .addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                android.util.Log.w("UnreadActivityVM", "Error listening to chatReads for $chatId: ${error.message}")
+                return@addSnapshotListener
+            }
             lastReadAt = snapshot?.getTimestamp("lastReadAt")
             onChange()
         }
 
     fun unreadCount(): Int {
-        if (messageTimestamps.isEmpty()) return 0
-        val read = lastReadAt ?: return messageTimestamps.size
-        return messageTimestamps.count { it > read }
+        if (recentMessages.isEmpty()) return 0
+        // Exclude messages sent by the user themselves — user's own sent messages never count as unread!
+        val incoming = recentMessages.filter { it.senderId.isNotEmpty() && it.senderId != uid }
+        if (incoming.isEmpty()) return 0
+
+        val read = lastReadAt
+        return if (read == null) {
+            // Never opened this chat before: all incoming messages from others are unread
+            incoming.size
+        } else {
+            incoming.count { it.timestamp > read }
+        }
     }
 
     fun isUnread(): Boolean = unreadCount() > 0

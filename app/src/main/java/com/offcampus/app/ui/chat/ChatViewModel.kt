@@ -64,8 +64,9 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
     private fun markRead(loaded: List<ChatMessage>) {
         val myUid = uid ?: return
         if (loaded.isEmpty()) return
+        val latestTimestamp = loaded.map { it.timestamp }.maxOrNull() ?: Timestamp.now()
         FirebaseRefs.riders.document(myUid).collection("chatReads").document(chatId)
-            .set(mapOf("lastReadAt" to Timestamp.now()))
+            .set(mapOf("lastReadAt" to latestTimestamp))
     }
 
     private fun resolveSenderNames(loaded: List<ChatMessage>) {

@@ -223,7 +223,7 @@ fun ActiveRideCard(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
-                        if (hasUnreadChat) {
+                        if (hasUnreadChat || unreadChatCount > 0) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)

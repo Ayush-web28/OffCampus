@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -71,7 +74,9 @@ fun LobbyDetailScreen(
     onOpenChat: () -> Unit,
     onOpenPostFare: () -> Unit,
     onOpenPaymentSplit: () -> Unit,
-    onOpenProfile: (String) -> Unit = {}
+    onOpenProfile: (String) -> Unit = {},
+    hasUnreadChat: Boolean = false,
+    unreadChatCount: Int = 0
 ) {
     val viewModel: LobbyDetailViewModel = viewModel(
         factory = viewModelFactory { initializer { LobbyDetailViewModel(lobbyId) } }
@@ -306,18 +311,40 @@ fun LobbyDetailScreen(
                         .fillMaxWidth()
                         .height(48.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ChatBubble,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Open lobby chat",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
+                    BadgedBox(
+                        badge = {
+                            if (hasUnreadChat || unreadChatCount > 0) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                ) {
+                                    if (unreadChatCount > 0) {
+                                        Text(
+                                            text = if (unreadChatCount > 9) "9+" else "$unreadChatCount",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChatBubble,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Open lobby chat",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

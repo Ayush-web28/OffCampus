@@ -188,8 +188,11 @@ fun OffCampusNavHost() {
             ) { entry ->
                 val lobbyId = entry.arguments?.getString("lobbyId")
                 if (lobbyId != null) {
+                    val unreadCount = unreadCounts[lobbyId] ?: 0
                     LobbyDetailScreen(
                         lobbyId = lobbyId,
+                        hasUnreadChat = lobbyId in unreadChatIds || unreadCount > 0,
+                        unreadChatCount = unreadCount,
                         onBack = { navController.popBackStack() },
                         onOpenChat = { navController.navigate(Routes.lobbyChat(lobbyId)) },
                         onOpenPostFare = { navController.navigate(Routes.postFare(lobbyId)) },

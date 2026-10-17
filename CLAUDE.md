@@ -327,6 +327,21 @@ A **real bug** did surface, though, the first time this was tested against an ac
   - **Root Cause**: `BottomTabItem` in `OffCampusBottomBar.kt` was using a single `tint = onPrimaryContainer` (`#FFFFFF`) for both the icon and the text label. While the icon sits on top of the green sliding pill (`primaryContainer`), the text label sits below on the navigation bar surface (`#FFFFFF`). This caused white-on-white text rendering for whichever tab was currently active.
   - **Resolution**: Separated `iconTint` (`onPrimaryContainer`, white on green pill) from `textTint` (`MaterialTheme.colorScheme.primary`, Deep Forest Green in light mode / emerald in dark mode). Active labels now render in bold primary green against the bar surface with full contrast and visibility across all three tabs.
 
+- **Fix 55 — Active ride card unread chat badge and dot indicator fix** (Bug fix):
+  - Resolved an issue where the active lobby card on the Lobbies screen did not display an unread red dot or unread badge counter when messages were received in the lobby.
+  - **Root Causes**:
+    1. **Self-Message Leak & Unfiltered Incoming Checks**: `ChatWatcher` in `UnreadActivityViewModel.kt` previously stored raw timestamps without sender identification. Messages sent by the current user were counted as unread if `lastReadAt` was uninitialized, and could corrupt unread counts.
+    2. **Read Marker Device Clock Drift**: In `ChatViewModel.markRead()`, `lastReadAt` was written using device local `Timestamp.now()`. When the receiver device's clock was slightly ahead of the sender device's clock, newly arriving messages from the sender arrived with timestamps `< lastReadAt`, preventing them from ever being registered as unread.
+    3. **Silent Listener Failures**: `ChatWatcher` and `UnreadActivityViewModel` swallowed Firestore snapshot listener errors with `_ ->`, failing silently without logging and resetting timestamps to empty lists upon network/permission glitches.
+    4. **ActiveRideCard Dot Rendering Guard**: The red alert circle next to `"YOUR ACTIVE LOBBY (MASTER)"` in `LobbyCard.kt` evaluated only `hasUnreadChat` instead of `hasUnreadChat || unreadChatCount > 0`.
+  - **Resolution**:
+    1. In `UnreadActivityViewModel.kt`, refactored `ChatWatcher` to record `WatchedMessage(senderId, timestamp)`. `unreadCount()` now strictly filters for incoming messages from other participants (`it.senderId != uid`). When `lastReadAt == null`, all incoming messages from others are counted as unread; otherwise, only incoming messages with `it.timestamp > lastReadAt` are counted.
+    2. In `ChatViewModel.kt`, updated `markRead` to record the exact maximum timestamp among loaded messages (`loaded.map { it.timestamp }.maxOrNull() ?: Timestamp.now()`), eliminating clock-skew masking of new messages.
+    3. In `LobbyCard.kt`, updated `ActiveRideCard` title unread indicator condition to `if (hasUnreadChat || unreadChatCount > 0)`.
+    4. In `LobbyBrowseScreen.kt`, updated `LobbyCard` in the browse feed to check `lobby.id in unreadChatIds || (unreadCounts[lobby.id] ?: 0) > 0`.
+    5. In `LobbyDetailScreen.kt` and `OffCampusNavHost.kt`, wired `hasUnreadChat` and `unreadChatCount` to show an unread badge on the "Open lobby chat" button.
+    6. Added warning logging to `UnreadActivityViewModel.kt` for listener errors.
+
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
 

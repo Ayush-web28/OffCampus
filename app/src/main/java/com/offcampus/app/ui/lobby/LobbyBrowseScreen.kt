@@ -462,7 +462,7 @@ fun LobbyBrowseScreen(
                 ) {
                     LobbyCard(
                         lobby = lobby,
-                        hasUnreadChat = lobby.id in unreadChatIds,
+                        hasUnreadChat = lobby.id in unreadChatIds || (unreadCounts[lobby.id] ?: 0) > 0,
                         onClick = { onOpenLobby(lobby.id) }
                     )
                 }
