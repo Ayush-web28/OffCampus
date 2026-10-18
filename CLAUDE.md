@@ -468,6 +468,19 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * In `LobbyBrowseViewModel.kt`, the in-app alert for `cancelReason == HOST_JOINED_ANOTHER` now checks `lobby.createdBy != uid`, ensuring only joined passengers see `"The lobby to <destination> was cancelled because the host joined another ride."` The host who willingly initiated the cancellation is never alerted.
     * In `LobbyDetailScreen.kt`, updated `CancelledTripCard` to explicitly display `"Lobby Cancelled by Host: The lobby master cancelled this trip because they joined another ride."` when viewed by a rider.
 
+- **Fix 69 — Unify lobby card ride chip placement, remove dot separators, and darken selected cab card in create lobby** (UI polish & contrast fix):
+  - **Context**:
+    * In `LobbyBrowseScreen`, standard lobbies (`LobbyCard`) had the `"Cab"` / `"Auto"` chip placed on the right of the route row, whereas the user's active lobby (`ActiveRideCard`) had it in the bottom row beside the time. In addition, the dot separator (`•`) and right-side `SeatDots` crowded the card, especially when displayed for full 6-rider cab lobbies.
+    * In `PostTripScreen` (Create Lobby), when `"Cab"` was selected, the card container rendered with a pale 12% alpha green against white text, making the card text and icon washed out and unreadable.
+  - **Lobby Card Layout Alignment (`LobbyCard.kt`)**:
+    * Shifted `RideTypeChip` in `LobbyCard` from the top route row down to the bottom details row, placed right before departure time (`[RideTypeChip]` `🕒 <Time>` `<Count>/<Max> riders`), matching the visual hierarchy of `ActiveRideCard`.
+    * Removed the route row right-side chip padding so long destination names now have the full width of the card for multi-line text wrapping.
+    * Removed `SeatDots` completely from `LobbyCard` to prevent crowding on 6-seat cab rides.
+    * Removed the `"• "` bullet dot separator before rider count in both `LobbyCard` and `ActiveRideCard`, standardizing on clean 8dp horizontal spacing between elements.
+  - **Selected Cab Card Contrast (`PostTripScreen.kt`)**:
+    * Changed the selected container color from `MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)` to solid `MaterialTheme.colorScheme.primary` (`#005A36` Lloyds Deep Forest Green in light mode).
+    * Updated content styling when Cab is selected: pure `Color.White` for "Cab" title, 85% white for "6 seats max", `Color.White` for `DirectionsCar` icon with `Color.White.copy(alpha = 0.2f)` circular background, and `Color.White` for checkmark icon, giving it razor-sharp contrast matching the selected group size and primary CTA button.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

@@ -344,7 +344,7 @@ fun PostTripScreen(
                     onClick = { viewModel.onRideTypeChange(RideType.CAB) },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isCabSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+                        containerColor = if (isCabSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                     ),
                     border = if (isCabSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -364,7 +364,7 @@ fun PostTripScreen(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .background(
-                                        if (isCabSelected) MaterialTheme.colorScheme.surface.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant,
+                                        if (isCabSelected) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                                         CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
@@ -373,7 +373,7 @@ fun PostTripScreen(
                                     imageVector = Icons.Default.DirectionsCar,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = if (isCabSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (isCabSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Column(modifier = Modifier.padding(start = 8.dp)) {
@@ -381,12 +381,12 @@ fun PostTripScreen(
                                     text = "Cab",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isCabSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    color = if (isCabSelected) Color.White else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "6 seats max",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (isCabSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isCabSelected) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -395,7 +395,7 @@ fun PostTripScreen(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = Color.White
                             )
                         }
                     }

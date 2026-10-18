@@ -1,6 +1,5 @@
 package com.offcampus.app.ui.lobby
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -102,60 +101,54 @@ fun LobbyCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val routeText = buildAnnotatedString {
-                        append(lobby.gate)
-                        withStyle(
-                            SpanStyle(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        ) {
-                            append(" → ")
-                        }
-                        append(lobby.destination)
-                    }
-                    Text(
-                        text = routeText,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    if (hasUnreadChat) {
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 6.dp)
-                                .size(8.dp)
-                                .background(color = MaterialTheme.colorScheme.error, shape = CircleShape)
+                val routeText = buildAnnotatedString {
+                    append(lobby.gate)
+                    withStyle(
+                        SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
+                    ) {
+                        append(" → ")
                     }
+                    append(lobby.destination)
                 }
-                RideTypeChip(lobby.rideType, modifier = Modifier.padding(start = 8.dp))
+                Text(
+                    text = routeText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (hasUnreadChat) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 6.dp)
+                            .size(8.dp)
+                            .background(color = MaterialTheme.colorScheme.error, shape = CircleShape)
+                    )
+                }
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                RideTypeChip(lobby.rideType)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier.size(13.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
@@ -163,14 +156,12 @@ fun LobbyCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = "• ${lobby.memberIds.size}/${lobby.maxSize} riders",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
                 }
-                SeatDots(filled = lobby.memberIds.size, total = lobby.maxSize)
+                Text(
+                    text = "${lobby.memberIds.size}/${lobby.maxSize} riders",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -196,23 +187,6 @@ fun RideTypeChip(rideType: RideType, modifier: Modifier = Modifier) {
     )
 }
 
-@Composable
-private fun SeatDots(filled: Int, total: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        repeat(total) { index ->
-            val isFilled = index < filled
-            val color by animateColorAsState(
-                targetValue = if (isFilled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                label = "seatDotFill"
-            )
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(color = color, shape = CircleShape)
-            )
-        }
-    }
-}
 
 /**
  * Stitch Neo-Transit Master Active Ride Card pinned at top of the browse list.
@@ -372,7 +346,7 @@ fun ActiveRideCard(
                             )
                         }
                         Text(
-                            text = "• ${lobby.memberIds.size}/${lobby.maxSize} riders",
+                            text = "${lobby.memberIds.size}/${lobby.maxSize} riders",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
