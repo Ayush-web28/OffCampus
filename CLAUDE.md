@@ -409,6 +409,14 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * Replaced geometric canvas rendering in `OffCampusLogo.kt` with `OffCampusLogoIcon` using the official `app_logo_mark.png`.
     * Updated `OffCampusBrandHeader` to render the badge with dual-tone branding: "Off" in high-contrast theme typography (`onBackground`) and "Campus" in official brand coral (`#FF6B55`).
 
+- **Fix 64 — High-contrast Light/Dark mode toggle switch with thumb icons** (UI/UX contrast fix):
+  - **Issue**: In Light mode, the unchecked state of the dark mode `Switch` on `ProfileScreen.kt` defaulted to Material 3 tokens (`surfaceVariant` `#F8FAFC` track and `outline` `#E5E7EB` thumb), rendering almost invisibly white-on-white against the pure white `#FFFFFF` card surface.
+  - **Fix**:
+    * Explicitly configured high-contrast switch colors for unchecked state: solid slate-300 track (`#CBD5E1`), crisp slate-400 border (`#94A3B8`), and pure white thumb knob (`#FFFFFF`).
+    * Added responsive `thumbContent` displaying an amber sun icon (`Icons.Default.LightMode`, tint `#D97706`) in light mode and an emerald moon icon (`Icons.Default.DarkMode`, tint `primary`) in dark mode.
+    * Added sunny amber badge (`#FEF3C7` background with `#D97706` sun icon) in light mode to the setting icon, matching the mode.
+    * Made the entire switch card row clickable (`.clip(RoundedCornerShape(14.dp)).clickable { ... }`) for easy one-tap toggling anywhere on the card.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

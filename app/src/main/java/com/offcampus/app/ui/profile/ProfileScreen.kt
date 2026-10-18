@@ -2,6 +2,8 @@ package com.offcampus.app.ui.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -336,7 +338,12 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable {
+                        ThemePreferences.setThemeMode(if (isDarkTheme) ThemeMode.LIGHT else ThemeMode.DARK)
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -353,7 +360,11 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    color = if (isDarkTheme) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    } else {
+                                        Color(0xFFFEF3C7)
+                                    },
                                     shape = CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -361,7 +372,7 @@ fun ProfileScreen(
                             Icon(
                                 imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = if (isDarkTheme) MaterialTheme.colorScheme.primary else Color(0xFFD97706),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -369,7 +380,8 @@ fun ProfileScreen(
                             Text(
                                 text = "Dark mode",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = if (isDarkTheme) "Dark theme active" else "Light theme active",
@@ -383,9 +395,34 @@ fun ProfileScreen(
                         onCheckedChange = { checked ->
                             ThemePreferences.setThemeMode(if (checked) ThemeMode.DARK else ThemeMode.LIGHT)
                         },
+                        thumbContent = if (isDarkTheme) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.DarkMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.LightMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    tint = Color(0xFFD97706)
+                                )
+                            }
+                        },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            checkedIconColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color(0xFFCBD5E1),
+                            uncheckedBorderColor = Color(0xFF94A3B8),
+                            uncheckedIconColor = Color(0xFFD97706)
                         )
                     )
                 }
