@@ -57,7 +57,28 @@ object PlaceSearchService {
         PlaceSuggestion("Thane Station (West)", "Gokhale Road, Thane West", 19.1860, 72.9757),
         PlaceSuggestion("Thane Station (East)", "Station Road, Thane East", 19.1872, 72.9775),
         PlaceSuggestion("Borivali Station (West)", "SV Road, Borivali West", 19.2294, 72.8568),
-        PlaceSuggestion("Dadar Station", "Dadar West, Mumbai", 19.0178, 72.8478)
+        PlaceSuggestion("Dadar Station", "Dadar West, Mumbai", 19.0178, 72.8478),
+        PlaceSuggestion("Powai / IIT Bombay", "Hiranandani Gardens, Powai", 19.1257, 72.9167),
+        PlaceSuggestion("Goregaon Station (West)", "SV Road, Goregaon West", 19.1663, 72.8526),
+        PlaceSuggestion("Malad Station (West)", "SV Road, Malad West", 19.1874, 72.8484),
+        PlaceSuggestion("Kandivali Station (West)", "SV Road, Kandivali West", 19.2062, 72.8504),
+        PlaceSuggestion("Santacruz Station (West)", "Station Road, Santacruz West", 19.0843, 72.8360),
+        PlaceSuggestion("Lower Parel", "Senapati Bapat Marg, Lower Parel", 19.0016, 72.8300),
+        PlaceSuggestion("High Street Phoenix / Palladium", "Lower Parel, Mumbai", 18.9950, 72.8248),
+        PlaceSuggestion("Churchgate Station", "Maharshi Karve Road, Churchgate", 18.9322, 72.8264),
+        PlaceSuggestion("CSMT / CST Station", "DN Road, Fort, Mumbai", 18.9401, 72.8352),
+        PlaceSuggestion("Colaba / Gateway of India", "Apollo Bandar, Colaba", 18.9067, 72.8147),
+        PlaceSuggestion("Marine Drive", "Netaji Subhash Chandra Bose Road", 18.9260, 72.8230),
+        PlaceSuggestion("Ghatkopar Station", "LBS Marg, Ghatkopar West", 19.0860, 72.9080),
+        PlaceSuggestion("R City Mall (Ghatkopar)", "LBS Marg, Ghatkopar West", 19.0990, 72.9160),
+        PlaceSuggestion("Chembur Station", "Station Road, Chembur", 19.0622, 72.8973),
+        PlaceSuggestion("Kurla Station", "Station Road, Kurla West", 19.0657, 72.8793),
+        PlaceSuggestion("Vashi (Navi Mumbai)", "Sector 30A, Vashi", 19.0770, 72.9986),
+        PlaceSuggestion("Versova", "J P Road, Versova, Andheri West", 19.1311, 72.8140),
+        PlaceSuggestion("Lokhandwala Complex", "Lokhandwala, Andheri West", 19.1411, 72.8258),
+        PlaceSuggestion("Khar Station", "SV Road, Khar West", 19.0700, 72.8350),
+        PlaceSuggestion("Inorbit Mall (Malad)", "Link Road, Malad West", 19.1729, 72.8360),
+        PlaceSuggestion("Oberoi Mall (Goregaon)", "Western Express Highway, Goregaon East", 19.1740, 72.8600)
     )
 
     /**
@@ -66,18 +87,48 @@ object PlaceSearchService {
     fun searchLocalPresets(query: String): List<PlaceSuggestion> {
         val q = query.trim().lowercase()
         if (q.isEmpty()) return emptyList()
-        return CAMPUS_PRESETS.filter { preset ->
+
+        // 1. Direct contains match on full query string
+        val directMatches = CAMPUS_PRESETS.filter { preset ->
             val name = preset.name.lowercase()
             val sub = preset.subtitle.lowercase()
-            name.contains(q) || sub.contains(q) ||
-                (q == "g1" && name.contains("gate 1")) ||
-                (q == "g2" && name.contains("gate 2")) ||
-                (q == "g3" && name.contains("gate 3")) ||
-                (q == "g4" && name.contains("gate 4")) ||
-                (q == "bkc" && (name.contains("bkc") || sub.contains("bkc"))) ||
-                (q == "t1" && name.contains("terminal 1")) ||
-                (q == "t2" && name.contains("terminal 2"))
+            name.contains(q) || sub.contains(q)
         }
+        if (directMatches.isNotEmpty()) return directMatches
+
+        // 2. Acronym / common shorthand mappings
+        val aliasMatches = when {
+            q.contains("bkc") -> CAMPUS_PRESETS.filter { it.name.contains("BKC", ignoreCase = true) }
+            q.contains("t1") || q.contains("domestic") -> CAMPUS_PRESETS.filter { it.name.contains("Terminal 1", ignoreCase = true) }
+            q.contains("t2") || q.contains("international") || q.contains("sahar") -> CAMPUS_PRESETS.filter { it.name.contains("Terminal 2", ignoreCase = true) }
+            q.contains("cst") || q.contains("csmt") || q.contains("vt") -> CAMPUS_PRESETS.filter { it.name.contains("CSMT", ignoreCase = true) }
+            q.contains("iit") || q.contains("hiranandani") -> CAMPUS_PRESETS.filter { it.name.contains("Powai", ignoreCase = true) }
+            q.contains("palladium") || q.contains("high street") -> CAMPUS_PRESETS.filter { it.name.contains("Palladium", ignoreCase = true) }
+            q.contains("r city") || q.contains("rcity") -> CAMPUS_PRESETS.filter { it.name.contains("R City", ignoreCase = true) }
+            q.contains("marketcity") || q.contains("market city") -> CAMPUS_PRESETS.filter { it.name.contains("Marketcity", ignoreCase = true) }
+            q.contains("inorbit") -> CAMPUS_PRESETS.filter { it.name.contains("Inorbit", ignoreCase = true) }
+            q.contains("oberoi") -> CAMPUS_PRESETS.filter { it.name.contains("Oberoi", ignoreCase = true) }
+            q.contains("mithibai") -> CAMPUS_PRESETS.filter { it.name.contains("Mithibai", ignoreCase = true) }
+            q.contains("mpstme") || q.contains("mukesh patel") -> CAMPUS_PRESETS.filter { it.name.contains("MPSTME", ignoreCase = true) }
+            q == "g1" -> CAMPUS_PRESETS.filter { it.name.contains("Gate 1") }
+            q == "g2" -> CAMPUS_PRESETS.filter { it.name.contains("Gate 2") }
+            q == "g3" -> CAMPUS_PRESETS.filter { it.name.contains("Gate 3") }
+            q == "g4" -> CAMPUS_PRESETS.filter { it.name.contains("Gate 4") }
+            else -> emptyList()
+        }
+        if (aliasMatches.isNotEmpty()) return aliasMatches
+
+        // 3. Token / individual keyword matching (e.g., query "To Bandra Station" -> words ["bandra", "station"])
+        val tokens = q.split(Regex("[^a-zA-Z0-9]+")).filter { it.length >= 3 && it !in setOf("the", "and", "gate", "station", "road") }
+        if (tokens.isNotEmpty()) {
+            val tokenMatches = CAMPUS_PRESETS.filter { preset ->
+                val name = preset.name.lowercase()
+                tokens.any { token -> name.contains(token) }
+            }
+            if (tokenMatches.isNotEmpty()) return tokenMatches
+        }
+
+        return emptyList()
     }
 
     /** Opens and immediately discards a connection to Photon to pre-warm DNS & TLS. */

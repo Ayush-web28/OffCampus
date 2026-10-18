@@ -417,6 +417,20 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * Added sunny amber badge (`#FEF3C7` background with `#D97706` sun icon) in light mode to the setting icon, matching the mode.
     * Made the entire switch card row clickable (`.clip(RoundedCornerShape(14.dp)).clickable { ... }`) for easy one-tap toggling anywhere on the card.
 
+- **Fix 65 — Pre-populate destination in Ola and Rapido ride booking deep links** (Integration & Deep Link fix):
+  - **Issue**: Tapping Uber worked, but selecting Ola or Rapido only opened their respective apps without filling in the destination or pickup locations.
+  - **Root Cause**:
+    * **Ola**: Launched using generic `olacabs://app/launch` without `landing_page=bk&bk_act=rn` (Ride Now booking flow). Without this action directive, Ola's router lands on the home feed and discards passed location parameters. Additionally, Ola strictly requires numeric `drop_lat` and `drop_lng` coordinates to set destination pins — if missing, `drop_address` is ignored.
+    * **Rapido**: Used non-standard `rapido://ride?source=...&destination=...` instead of Rapido's actual deep link endpoint (`rapido://open?`) with standard drop/pickup keys (`drop`, `drop_lat`, `drop_lng`, `drop_name`, `drop_address`).
+    * **Missing Coordinates**: When creators entered destinations by free text without tapping a suggestion, `destinationLat`/`destinationLng` remained null, preventing Ola and Rapido from placing drop pins.
+  - **Fix**:
+    * **Expanded Preset Database**: Added comprehensive transit hubs, stations, airports (T1, T2), business districts (BKC, Lower Parel), and student hubs across Mumbai (45+ locations) in `PlaceSearchService.kt`.
+    * **Smart Keyword Matching**: Enhanced `searchLocalPresets` to support direct contains, acronyms (`bkc`, `t1`, `t2`, `cst`, `iit`), and word tokens so free-typed text reliably resolves exact coordinates.
+    * **Coordinate Auto-Resolution**: Updated `PostTripViewModel.submit()` to automatically resolve and persist gate and destination coordinates to Firestore upon lobby creation.
+    * **Ola Booking Deep Link**: Added `landing_page=bk&bk_act=rn` and comprehensive pickup/drop parameters (`lat`, `lng`, `pickup_lat`, `pickup_lng`, `drop_lat`, `drop_lng`, `address`, `drop_address`, `drop`, `destination`, `category`).
+    * **Rapido Deep Link**: Switched to `rapido://open?` with dual-standard parameters (`drop`, `destination`, `drop_name`, `drop_address`, `drop_lat`, `drop_lng`, `pickup`, `source`, `pickup_lat`, `pickup_lng`).
+    * **Intent Extras & Package Targeting**: In `openRideBookingLink()`, set `setPackage(link.playStorePackage)` when installed and attached coordinate and address intent extras to cover both URI and Bundle parsing paths.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

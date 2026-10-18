@@ -196,17 +196,26 @@ class PostTripViewModel : ViewModel() {
                     return@launch
                 }
 
+                val resolvedDest = if (form.destinationLat == null) {
+                    PlaceSearchService.searchLocalPresets(form.destination).firstOrNull()
+                } else null
+                val resolvedGate = if (form.gateLat == null) {
+                    PlaceSearchService.searchLocalPresets(form.gate).firstOrNull()
+                } else null
+
+                val finalGateLat = form.gateLat ?: resolvedGate?.lat ?: 19.1076
+                val finalGateLng = form.gateLng ?: resolvedGate?.lng ?: 72.8263
+                val finalDestLat = form.destinationLat ?: resolvedDest?.lat
+                val finalDestLng = form.destinationLng ?: resolvedDest?.lng
+
                 val lobby = Lobby(
                     checkpoint = form.checkpoint,
                     gate = form.gate,
                     destination = form.destination,
-                    // Only set if the rider actually tapped a suggestion rather than typing a
-                    // place Photon doesn't know — null either way is a normal, expected value,
-                    // not a failure, since the field works as plain free text regardless.
-                    gateLat = form.gateLat,
-                    gateLng = form.gateLng,
-                    destinationLat = form.destinationLat,
-                    destinationLng = form.destinationLng,
+                    gateLat = finalGateLat,
+                    gateLng = finalGateLng,
+                    destinationLat = finalDestLat,
+                    destinationLng = finalDestLng,
                     departureTime = Timestamp(form.departureTime),
                     rideType = form.rideType,
                     maxSize = form.maxSize,
