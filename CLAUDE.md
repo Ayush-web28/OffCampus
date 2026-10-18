@@ -455,6 +455,19 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * **Rapido Route Fix**: Replaced the generic `rapido://open?` launch action with Rapido's booking intent `rapido://booking?pickup_lat=...&pickup_lng=...&drop_lat=...&drop_lng=...&pickup=...&drop=...&service_type=...`.
     * **Clipboard Auto-Copy Assist**: Whenever Ola or Rapido is launched, OffCampus automatically copies the destination string to Android's `ClipboardManager` and displays a short confirmation toast (`"Opening <App> • Destination copied to clipboard"`). This ensures that if the ride app opens directly to its search input on any OEM or app version, the rider can paste the full destination address in a single tap without re-typing.
 
+- **Fix 68 — Require confirmation before cancelling hosted lobby on join, and restrict cancellation notifications to other riders** (Feature & Notification Fix):
+  - **Context**: When a user hosting an active lobby attempted to join another lobby, their hosted lobby was previously auto-cancelled immediately without asking. Furthermore, the host was mistakenly receiving cancellation push notifications and in-app alerts about their own lobby being cancelled by the master.
+  - **Confirmation Dialog (`LobbyDetailScreen.kt` & `LobbyDetailViewModel.kt`)**:
+    * When a user taps "Join lobby", `LobbyDetailViewModel.join()` checks if they are currently the creator (`createdBy == uid`) of another active lobby (`OPEN` or `LOCKED`).
+    * If active, `join()` halts and presents a confirmation dialog (`AlertDialog`):
+      `"Cancel your lobby? You are currently hosting an active lobby to <destination>. Joining this lobby will cancel your own lobby and notify any riders in it. Do you want to cancel your lobby and join?"`
+    * Tapping `"Keep my lobby"` dismisses the dialog and keeps their existing lobby intact without joining.
+    * Tapping `"Cancel my lobby & join"` invokes `confirmCancelOwnedLobbyAndJoin()`, cancelling the hosted lobby and proceeding with the join.
+  - **Selective Notification & Alert Filtering (`LobbyBrowseViewModel.kt`, `NotificationService.kt`)**:
+    * When the hosted lobby is cancelled, `NotificationService.notifyLobbyCancelledByHost()` sends FCM notifications strictly to `otherMembers = conflict.memberIds.filter { it != uid }`, completely excluding the host.
+    * In `LobbyBrowseViewModel.kt`, the in-app alert for `cancelReason == HOST_JOINED_ANOTHER` now checks `lobby.createdBy != uid`, ensuring only joined passengers see `"The lobby to <destination> was cancelled because the host joined another ride."` The host who willingly initiated the cancellation is never alerted.
+    * In `LobbyDetailScreen.kt`, updated `CancelledTripCard` to explicitly display `"Lobby Cancelled by Host: The lobby master cancelled this trip because they joined another ride."` when viewed by a rider.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

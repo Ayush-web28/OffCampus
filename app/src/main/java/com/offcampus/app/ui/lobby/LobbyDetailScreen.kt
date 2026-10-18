@@ -95,26 +95,37 @@ fun LobbyDetailScreen(
     val lobby by viewModel.lobby.collectAsStateWithLifecycle()
     val members by viewModel.members.collectAsStateWithLifecycle()
     val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
-    val hostCancelledAlert by viewModel.hostCancelledAlert.collectAsStateWithLifecycle()
+    val conflictOwnedLobby by viewModel.conflictOwnedLobby.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showUnlockDialog by remember { mutableStateOf(false) }
 
-    if (hostCancelledAlert != null) {
+    if (conflictOwnedLobby != null) {
+        val owned = conflictOwnedLobby!!
         AlertDialog(
-            onDismissRequest = viewModel::dismissHostCancelledAlert,
+            onDismissRequest = viewModel::dismissConflictOwnedLobby,
             icon = {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = Icons.Default.Cancel,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(28.dp)
                 )
             },
-            title = { Text("Previous Lobby Cancelled", fontWeight = FontWeight.Bold) },
-            text = { Text(hostCancelledAlert!!) },
+            title = { Text("Cancel your lobby?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("You are currently hosting an active lobby to ${owned.destination}. Joining this lobby will cancel your own lobby and notify any riders in it. Do you want to cancel your lobby and join?")
+            },
             confirmButton = {
-                Button(onClick = viewModel::dismissHostCancelledAlert) {
-                    Text("Understood")
+                Button(
+                    onClick = viewModel::confirmCancelOwnedLobbyAndJoin,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cancel my lobby & join", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissConflictOwnedLobby) {
+                    Text("Keep my lobby")
                 }
             }
         )
@@ -397,6 +408,7 @@ fun LobbyDetailScreen(
                 when {
                     status == LobbyStatus.CANCELLED -> CancelledTripCard(
                         isAutoExpired = current.isAutoExpired(),
+                        cancelReason = current.cancelReason,
                         departureTime = current.departureTime,
                         onBack = onBack
                     )
@@ -756,6 +768,7 @@ private fun LockedRideBookingCard(
 @Composable
 private fun CancelledTripCard(
     isAutoExpired: Boolean = false,
+    cancelReason: String? = null,
     departureTime: com.google.firebase.Timestamp? = null,
     onBack: () -> Unit
 ) {
@@ -778,21 +791,31 @@ private fun CancelledTripCard(
                 modifier = Modifier.size(44.dp)
             )
             Text(
-                if (isAutoExpired) "Lobby Automatically Cancelled" else "This lobby was cancelled",
+                when {
+                    isAutoExpired -> "Lobby Automatically Cancelled"
+                    cancelReason == Lobby.CANCEL_REASON_HOST_LEFT -> "Lobby Cancelled by Host"
+                    else -> "This lobby was cancelled"
+                },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                if (isAutoExpired) {
-                    if (formattedTime != null) {
-                        "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time ($formattedTime)."
-                    } else {
-                        "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                when {
+                    isAutoExpired -> {
+                        if (formattedTime != null) {
+                            "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time ($formattedTime)."
+                        } else {
+                            "This lobby was automatically cancelled because it wasn't locked within 1 minute past departure time."
+                        }
                     }
-                } else {
-                    "The lobby master cancelled this trip before the ride finished."
+                    cancelReason == Lobby.CANCEL_REASON_HOST_LEFT -> {
+                        "The lobby master cancelled this trip because they joined another ride."
+                    }
+                    else -> {
+                        "The lobby master cancelled this trip before the ride finished."
+                    }
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
