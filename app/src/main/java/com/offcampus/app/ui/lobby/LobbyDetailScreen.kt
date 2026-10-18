@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -39,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -50,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
@@ -90,6 +93,7 @@ fun LobbyDetailScreen(
     val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
     val hostCancelledAlert by viewModel.hostCancelledAlert.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showUnlockDialog by remember { mutableStateOf(false) }
 
     if (hostCancelledAlert != null) {
         AlertDialog(
@@ -107,6 +111,37 @@ fun LobbyDetailScreen(
             confirmButton = {
                 Button(onClick = viewModel::dismissHostCancelledAlert) {
                     Text("Understood")
+                }
+            }
+        )
+    }
+
+    if (showUnlockDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnlockDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LockOpen,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = { Text("Unlock lobby?", fontWeight = FontWeight.Bold) },
+            text = { Text("If you locked the lobby by mistake, unlocking will reopen it so new riders can join.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showUnlockDialog = false
+                        viewModel.unlock()
+                    }
+                ) {
+                    Text("Unlock lobby")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnlockDialog = false }) {
+                    Text("Keep locked")
                 }
             }
         )
@@ -182,24 +217,60 @@ fun LobbyDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val isLocked = current.status == LobbyStatus.LOCKED
+                        val isMaster = viewModel.currentUid == current.createdBy
                         val statusBg = if (isLocked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f)
                         val statusColor = if (isLocked) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.tertiary
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier
-                                .background(statusBg, RoundedCornerShape(999.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (isLocked) {
-                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(12.dp), tint = statusColor)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier
+                                    .background(statusBg, RoundedCornerShape(999.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                if (isLocked) {
+                                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(12.dp), tint = statusColor)
+                                }
+                                Text(
+                                    text = if (isLocked) "LOBBY LOCKED" else "LOBBY OPEN",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
+                                )
                             }
-                            Text(
-                                text = if (isLocked) "LOBBY LOCKED" else "LOBBY OPEN",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = statusColor
-                            )
+
+                            if (isMaster && isLocked) {
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .clickable { showUnlockDialog = true }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.LockOpen,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "UNLOCK",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
                         RideTypeChip(current.rideType)
                     }

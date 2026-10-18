@@ -431,6 +431,16 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * **Rapido Deep Link**: Switched to `rapido://open?` with dual-standard parameters (`drop`, `destination`, `drop_name`, `drop_address`, `drop_lat`, `drop_lng`, `pickup`, `source`, `pickup_lat`, `pickup_lng`).
     * **Intent Extras & Package Targeting**: In `openRideBookingLink()`, set `setPackage(link.playStorePackage)` when installed and attached coordinate and address intent extras to cover both URI and Bundle parsing paths.
 
+- **Fix 66 — Add UNLOCK option beside LOBBY LOCKED badge for accidental locking** (Feature & Security enhancement):
+  - **Context**: If a lobby master locked their lobby by mistake (or needed to let additional riders join before booking), there was previously no way to reverse the lock back to `OPEN` status.
+  - **UI Implementation**:
+    * Added a compact `[🔓 UNLOCK]` pill chip with a 12dp `Icons.Default.LockOpen` icon and bold green text directly beside the amber `[🔒 LOBBY LOCKED]` badge on the lobby details card header in `LobbyDetailScreen.kt`.
+    * Restricted visibility strictly to the lobby master (`isMaster && isLocked`).
+    * Added a safety confirmation `AlertDialog` ("Unlock lobby?") explaining that reopening the lobby will allow new riders to join.
+  - **ViewModel & Security Rules**:
+    * Added `unlock()` method to `LobbyDetailViewModel.kt` updating status back to `OPEN`.
+    * Updated `firestore.rules` with `isUnlockingLobby()` permitting only the lobby creator (`request.auth.uid == resource.data.createdBy`) to transition status from `LOCKED` back to `OPEN`.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.

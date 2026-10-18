@@ -224,6 +224,22 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         }
     }
 
+    /** Master can unlock a LOCKED lobby back to OPEN if locked by mistake. */
+    fun unlock() {
+        val uid = currentUid ?: return
+        val currentLobby = _lobby.value ?: return
+        if (currentLobby.createdBy != uid) return
+        viewModelScope.launch {
+            _isUpdating.value = true
+            try {
+                FirebaseRefs.lobbies.document(lobbyId).update("status", LobbyStatus.OPEN.name).await()
+            } catch (_: Exception) {
+            } finally {
+                _isUpdating.value = false
+            }
+        }
+    }
+
     /** Master can cancel the lobby before the ride is finished (while OPEN or LOCKED). */
     fun cancelLobby(onSuccess: () -> Unit = {}) {
         val uid = currentUid ?: return
