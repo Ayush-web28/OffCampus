@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -54,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -692,11 +696,32 @@ private fun LockedRideBookingCard(
                 "Pickup set to $pickupName; destination set to ${lobby.destination}.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
             )
-            links.forEach { link ->
-                RideBookingButton(link = link, onOpen = { openRideBookingLink(context, link) })
+
+            Text(
+                text = "Open With",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                links.forEach { link ->
+                    RideBookingLogoCard(
+                        link = link,
+                        onOpen = { openRideBookingLink(context, link) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
+
             Button(
                 onClick = onSplitFare,
                 shape = RoundedCornerShape(14.dp),
@@ -786,15 +811,16 @@ private fun CancelledTripCard(
     }
 }
 
-/** A brief "Opening Uber…" spinner state instead of the button just sitting there while Android
- * hands off to the other app — `openRideBookingLink` itself returns almost instantly (it only
- * *requests* the activity start), the real handoff delay happens at the OS level a beat later, so
- * without this a tap looked like nothing happened for a moment. The 2s timeout is a safety net,
- * not the expected case — it only matters if a rider backs out of Uber/the Play Store fast enough
- * to see this screen resume while [opening] is still true, so it doesn't get stuck reading
- * "Opening…" forever after a real launch already happened. */
+/**
+ * A branded logo card/tile for ride-hailing providers (Uber, Ola, Rapido)
+ * styled like credit card selection chips with brand logos and click ripples.
+ */
 @Composable
-private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
+private fun RideBookingLogoCard(
+    link: RideBookingLink,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var opening by remember { mutableStateOf(false) }
     LaunchedEffect(opening) {
         if (opening) {
@@ -802,27 +828,117 @@ private fun RideBookingButton(link: RideBookingLink, onOpen: () -> Unit) {
             opening = false
         }
     }
-    Button(
-        onClick = { opening = true; onOpen() },
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = Color.White
-        ),
-        modifier = Modifier
-            .padding(bottom = 8.dp)
-            .fillMaxWidth()
-            .height(48.dp)
+
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    // Card background and border tuned for light and dark modes
+    val (cardBg, borderStroke) = when (link.label) {
+        "Uber" -> Pair(
+            if (isDark) Color(0xFF18181B) else Color(0xFF000000),
+            BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else Color(0xFF1E293B))
+        )
+        "Ola" -> Pair(
+            if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF),
+            BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0))
+        )
+        else -> Pair( // Rapido
+            if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF),
+            BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0))
+        )
+    }
+
+    Surface(
+        modifier = modifier
+            .height(54.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable {
+                opening = true
+                onOpen()
+            },
+        shape = RoundedCornerShape(12.dp),
+        color = cardBg,
+        border = borderStroke
     ) {
-        if (opening) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = Color.White
-            )
-            Text("Opening ${link.label}…", modifier = Modifier.padding(start = 8.dp), fontWeight = FontWeight.Medium)
-        } else {
-            Text("Open in ${link.label}", fontWeight = FontWeight.Medium)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (opening) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = if (link.label == "Uber") Color.White else MaterialTheme.colorScheme.primary
+                )
+            } else {
+                when (link.label) {
+                    "Uber" -> {
+                        Text(
+                            text = "Uber",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            letterSpacing = (-0.3).sp
+                        )
+                    }
+                    "Ola" -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF00C853), // Ola signature green
+                                modifier = Modifier.size(15.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isDark) Color(0xFF1E293B) else Color.White,
+                                        modifier = Modifier.size(6.dp)
+                                    ) {}
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "OLA",
+                                color = if (isDark) Color.White else Color(0xFF0F172A),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 15.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    else -> { // Rapido
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFFFBBF24), // Rapido yellow
+                                modifier = Modifier.size(15.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "R",
+                                        color = Color(0xFFDC2626), // Rapido red
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "rapido",
+                                color = if (isDark) Color.White else Color(0xFF0F172A),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                letterSpacing = (-0.2).sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

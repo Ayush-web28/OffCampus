@@ -441,6 +441,20 @@ A **real bug** did surface, though, the first time this was tested against an ac
     * Added `unlock()` method to `LobbyDetailViewModel.kt` updating status back to `OPEN`.
     * Updated `firestore.rules` with `isUnlockingLobby()` permitting only the lobby creator (`request.auth.uid == resource.data.createdBy`) to transition status from `LOCKED` back to `OPEN`.
 
+- **Fix 67 — Replace full-width ride buttons with 'Open With' logo card row and fix Ola & Rapido deep-linking** (UI polish & integration fix):
+  - **Context**: Rather than three massive full-width stacked buttons (`Open in Uber`, `Open in Ola`, `Open in Rapido`) that dominated the locked lobby card, the user requested an elegant credit-card-styled provider selector with a bold `"Open With"` subheading and side-by-side branded cards for Uber, Ola, and Rapido, while also resolving the Ola and Rapido coordinate pre-fill issue.
+  - **UI Implementation (`LobbyDetailScreen.kt`)**:
+    * Added a bold `"Open With"` subheading inside `LockedRideBookingCard`.
+    * Created `RideBookingLogoCard`: a horizontal row of 3 sleek, equal-width (`weight(1f)`) rounded cards (`RoundedCornerShape(12.dp)`, 54dp height) with official brand styling:
+      - **Uber**: Sleek black card with bold white "Uber" typography.
+      - **Ola**: Clean surface card with iconic Ola green circular emblem (`#00C853`) and bold "OLA" lettering.
+      - **Rapido**: Clean surface card with yellow badge (`#FBBF24`), red "R" emblem, and bold "rapido" typography.
+    * Added tactile tap ripple and a centered loading spinner (`CircularProgressIndicator`) when an app launch is triggered.
+  - **Ola & Rapido Deep-Linking Fix (`RideBooking.kt`)**:
+    * **Ola Scheme Fix**: Removed `landing_page=bk&bk_act=rn` (which previously commanded Ola's router to open the blank map search screen, discarding subsequent parameters). Conformed strictly to the official Ola Developer Platform specification (`olacabs://app/launch?lat=...&lng=...&drop_lat=...&drop_lng=...&address=...&drop_address=...&category=...&utm_source=offcampus`), passing standard fleet categories (`auto` or `mini`).
+    * **Rapido Route Fix**: Replaced the generic `rapido://open?` launch action with Rapido's booking intent `rapido://booking?pickup_lat=...&pickup_lng=...&drop_lat=...&drop_lng=...&pickup=...&drop=...&service_type=...`.
+    * **Clipboard Auto-Copy Assist**: Whenever Ola or Rapido is launched, OffCampus automatically copies the destination string to Android's `ClipboardManager` and displays a short confirmation toast (`"Opening <App> • Destination copied to clipboard"`). This ensures that if the ride app opens directly to its search input on any OEM or app version, the rider can paste the full destination address in a single tap without re-typing.
+
 
 ## Working method — phased, not linear
 Work through phases in order (0 Design Brief → 1 Setup/Data Model → 2 Auth/Profile → 3 Lobby System → 4 Friends → 5 Chat → 6 Ride Booking Deep Links → 7 Payment Splitting → 8 Reporting → 9 Security Rules/Cloud Functions → 10 Aesthetic Polish → 11 Full Regression). After each phase: summarize what was built, run its checklist explicitly (pass/fail per item, not just "done"), fix failures and re-run the *whole* checklist (a fix can break something that previously passed), then wait for the user's go-ahead before starting the next phase. If something is ambiguous (design choice, data-model tradeoff), stop and ask rather than deciding silently.
