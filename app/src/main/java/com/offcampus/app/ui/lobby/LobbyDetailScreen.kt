@@ -257,7 +257,8 @@ fun LobbyDetailScreen(
                                 )
                             }
 
-                            if (isMaster && isLocked) {
+                            val canUnlock = isMaster && isLocked && !current.isAutoExpired()
+                            if (canUnlock) {
                                 Surface(
                                     shape = RoundedCornerShape(999.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant,

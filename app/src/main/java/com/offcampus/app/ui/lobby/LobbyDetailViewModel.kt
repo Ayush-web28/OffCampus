@@ -266,7 +266,8 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
             _isUpdating.value = true
             try {
                 FirebaseRefs.lobbies.document(lobbyId).update("status", LobbyStatus.OPEN.name).await()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("LobbyDetailViewModel", "Failed to unlock lobby $lobbyId", e)
             } finally {
                 _isUpdating.value = false
             }
