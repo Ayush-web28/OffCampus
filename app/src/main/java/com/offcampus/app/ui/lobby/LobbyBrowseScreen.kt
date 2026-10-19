@@ -244,48 +244,41 @@ fun LobbyBrowseScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(innerPadding)
         ) {
-            item(key = "header") {
-                Text(
-                    "Lobbies",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                )
-            }
+            Text(
+                "Lobbies",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            )
 
-            item(key = "search") {
-                LocationAutocompleteField(
-                    value = filters.destinationQuery,
-                    suggestions = searchSuggestions,
-                    isLoading = queryLoading,
-                    onValueChange = viewModel::onDestinationQueryChange,
-                    onSuggestionSelected = viewModel::onSuggestionSelected,
-                    label = "Search destination",
-                    placeholder = "e.g. Thane, BKC, Airport",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                )
-            }
+            LocationAutocompleteField(
+                value = filters.destinationQuery,
+                suggestions = searchSuggestions,
+                isLoading = queryLoading,
+                onValueChange = viewModel::onDestinationQueryChange,
+                onSuggestionSelected = viewModel::onSuggestionSelected,
+                label = "Search destination",
+                placeholder = "e.g. Thane, BKC, Airport",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            )
 
-            item(key = "filters") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                     // Dropdown 1: Ride Type
                     Box {
                         FilterChip(
@@ -419,8 +412,14 @@ fun LobbyBrowseScreen(
                         )
                     }
                 }
-            }
 
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             pendingPayment?.let { info ->
                 item(key = "pending_payment_${info.lobbyId}") {
                     Box(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -490,6 +489,7 @@ fun LobbyBrowseScreen(
                 }
             }
         }
+    }
     }
 }
 
