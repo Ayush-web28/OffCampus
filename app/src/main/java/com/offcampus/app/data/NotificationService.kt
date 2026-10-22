@@ -66,7 +66,7 @@ object NotificationService {
     private suspend fun getTokensForRiders(uids: List<String>): List<String> {
         val distinctUids = uids.filter { it.isNotBlank() }.distinct()
         if (distinctUids.isEmpty()) return emptyList()
-        return try {
+        val tokens = try {
             val snapshot = FirebaseRefs.riders
                 .whereIn(FieldPath.documentId(), distinctUids.take(30))
                 .get().await()
@@ -74,6 +74,12 @@ object NotificationService {
         } catch (_: Exception) {
             emptyList()
         }
+        if (tokens.isNotEmpty()) return tokens
+        return distinctUids.mapNotNull { uid ->
+            try {
+                FirebaseRefs.riders.document(uid).get().await().getString("fcmToken")
+            } catch (_: Exception) { null }
+        }.filter { it.isNotBlank() }
     }
 
     /** 1. To lobby master when a new rider joins lobby */
@@ -160,10 +166,11 @@ object NotificationService {
         scope.launch {
             val recipientIds = memberIds.filter { it != senderId }
             val tokens = getTokensForRiders(recipientIds)
+            val dest = destination.trim().ifBlank { "ride" }
             send(
                 tokens = tokens,
-                title = "$senderName in $destination",
-                body = messageText,
+                title = "New message in $dest lobby",
+                body = "$senderName: $messageText",
                 data = mapOf("type" to "LOBBY_CHAT", "lobbyId" to lobbyId)
             )
         }

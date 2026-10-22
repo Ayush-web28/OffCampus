@@ -3,6 +3,7 @@ package com.offcampus.app
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class OffCampusApp : Application(), Application.ActivityLifecycleCallbacks {
 
@@ -10,6 +11,11 @@ class OffCampusApp : Application(), Application.ActivityLifecycleCallbacks {
         @Volatile
         var isAppInForeground: Boolean = false
             private set
+
+        @Volatile
+        var currentChatId: String? = null
+
+        val pendingNotificationRoute = MutableStateFlow<String?>(null)
     }
 
     private var startedActivities = 0

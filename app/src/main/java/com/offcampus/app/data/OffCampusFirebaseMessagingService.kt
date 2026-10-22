@@ -26,9 +26,22 @@ class OffCampusFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
+        val type = remoteMessage.data["type"]
+        val lobbyId = remoteMessage.data["lobbyId"]
+        val chatId = remoteMessage.data["chatId"]
+
+        // If the user is actively viewing this specific chat right now, suppress the notification
+        // so they don't get a heads-up banner for messages they are currently reading.
+        if (type == "LOBBY_CHAT" && !lobbyId.isNullOrBlank() && OffCampusApp.currentChatId == lobbyId) {
+            return
+        }
+        if (type == "FRIEND_CHAT" && !chatId.isNullOrBlank() && OffCampusApp.currentChatId == chatId) {
+            return
+        }
+
         // Only show system push notifications when the app is in background, closed, or device locked.
-        // In-app live Firestore listeners already deliver real-time updates when the app is open.
-        if (OffCampusApp.isAppInForeground) {
+        // For chat messages, also show if in foreground but user is on another screen.
+        if (OffCampusApp.isAppInForeground && type != "LOBBY_CHAT" && type != "FRIEND_CHAT") {
             return
         }
 

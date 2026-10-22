@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.offcampus.app.OffCampusApp
 import com.offcampus.app.ui.auth.AuthScreen
 import com.offcampus.app.ui.auth.AuthUiState
 import com.offcampus.app.ui.auth.AuthViewModel
@@ -96,6 +97,15 @@ fun OffCampusNavHost() {
             // AuthScreen itself renders the "what's your name" step for this state.
             is AuthUiState.NeedsProfile -> navController.navigate(Routes.AUTH) { popUpTo(0) }
             AuthUiState.SignedOut -> navController.navigate(Routes.AUTH) { popUpTo(0) }
+        }
+    }
+
+    val pendingRoute by OffCampusApp.pendingNotificationRoute.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingRoute, authState) {
+        val route = pendingRoute
+        if (route != null && authState is AuthUiState.SignedIn) {
+            navController.navigate(route)
+            OffCampusApp.pendingNotificationRoute.value = null
         }
     }
 

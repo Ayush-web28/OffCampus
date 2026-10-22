@@ -27,7 +27,7 @@ fun friendChatId(uidA: String, uidB: String): String = listOf(uidA, uidB).sorted
  * friend-to-friend thread (chatId from [friendChatId]). Both are just documents in the same
  * top-level "chats" collection with a "messages" subcollection, per the Phase 1 data model.
  */
-class ChatViewModel(private val chatId: String) : ViewModel() {
+class ChatViewModel(private val chatId: String, private val isLobby: Boolean = false) : ViewModel() {
     private val uid: String? get() = Firebase.auth.currentUser?.uid
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -100,7 +100,24 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
                         .toObject(Rider::class.java)?.name?.ifBlank { null }
                 } catch (_: Exception) { null } ?: "Rider"
 
-                if (chatId.contains("_")) {
+                if (isLobby) {
+                    try {
+                        val lobbyDoc = FirebaseRefs.lobbies.document(chatId).get().await()
+                        val lobby = lobbyDoc.toObject(Lobby::class.java)
+                        if (lobby != null) {
+                            val destination = lobby.destination.ifBlank { "Lobby" }
+                            val allParticipants = (lobby.memberIds + lobby.createdBy).filter { it.isNotBlank() }.distinct()
+                            NotificationService.notifyLobbyChat(
+                                memberIds = allParticipants,
+                                senderId = id,
+                                senderName = senderName,
+                                destination = destination,
+                                messageText = trimmed,
+                                lobbyId = chatId
+                            )
+                        }
+                    } catch (_: Exception) {}
+                } else {
                     val uids = chatId.split("_")
                     val recipientId = uids.firstOrNull { it != id } ?: ""
                     if (recipientId.isNotBlank()) {
@@ -111,22 +128,6 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
                             chatId = chatId
                         )
                     }
-                } else {
-                    try {
-                        val lobbyDoc = FirebaseRefs.lobbies.document(chatId).get().await()
-                        val lobby = lobbyDoc.toObject(Lobby::class.java)
-                        if (lobby != null) {
-                            val destination = lobby.destination.ifBlank { "Lobby" }
-                            NotificationService.notifyLobbyChat(
-                                memberIds = lobby.memberIds,
-                                senderId = id,
-                                senderName = senderName,
-                                destination = destination,
-                                messageText = trimmed,
-                                lobbyId = chatId
-                            )
-                        }
-                    } catch (_: Exception) {}
                 }
             } catch (e: Exception) {
                 // The message just won't appear — the input keeps whatever the caller does with

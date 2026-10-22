@@ -17,11 +17,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.ThemeMode
 import com.offcampus.app.data.ThemePreferences
 import com.offcampus.app.ui.auth.AuthViewModel
 import com.offcampus.app.ui.navigation.OffCampusNavHost
+import com.offcampus.app.ui.navigation.Routes
 import com.offcampus.app.ui.theme.OffCampusTheme
 
 class MainActivity : ComponentActivity() {
@@ -67,8 +70,28 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
-    private fun handleIntent(intent: Intent) {
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
         authViewModel.handleEmailLinkIntent(intent.data?.toString())
+
+        val type = intent.getStringExtra("type")
+        val lobbyId = intent.getStringExtra("lobbyId")
+        val chatId = intent.getStringExtra("chatId")
+        when (type) {
+            "LOBBY_CHAT" -> if (!lobbyId.isNullOrBlank()) {
+                OffCampusApp.pendingNotificationRoute.value = Routes.lobbyChat(lobbyId)
+            }
+            "FRIEND_CHAT" -> if (!chatId.isNullOrBlank()) {
+                val myUid = com.google.firebase.Firebase.auth.currentUser?.uid
+                val friendId = if (myUid != null) chatId.split("_").firstOrNull { it != myUid } ?: "" else ""
+                if (friendId.isNotBlank()) {
+                    OffCampusApp.pendingNotificationRoute.value = Routes.friendChat(friendId)
+                }
+            }
+            "LOBBY_JOIN", "LOBBY_FULL", "REMOVED_FROM_LOBBY" -> if (!lobbyId.isNullOrBlank()) {
+                OffCampusApp.pendingNotificationRoute.value = Routes.lobbyDetail(lobbyId)
+            }
+        }
     }
 
     private fun checkAndRequestNotificationPermission() {

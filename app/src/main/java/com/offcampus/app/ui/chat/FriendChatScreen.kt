@@ -1,6 +1,7 @@
 package com.offcampus.app.ui.chat
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -9,6 +10,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.offcampus.app.OffCampusApp
 
 /**
  * Persistent 1:1 thread with a friend, reachable "usable anytime" (not tied to any lobby) — the
@@ -24,8 +26,17 @@ fun FriendChatScreen(friendId: String, onBack: () -> Unit) {
     val myUid = Firebase.auth.currentUser?.uid
     val chatId = remember(friendId, myUid) { myUid?.let { friendChatId(it, friendId) } ?: friendId }
 
+    DisposableEffect(chatId) {
+        OffCampusApp.currentChatId = chatId
+        onDispose {
+            if (OffCampusApp.currentChatId == chatId) {
+                OffCampusApp.currentChatId = null
+            }
+        }
+    }
+
     val chatViewModel: ChatViewModel = viewModel(
-        factory = viewModelFactory { initializer { ChatViewModel(chatId) } }
+        factory = viewModelFactory { initializer { ChatViewModel(chatId, isLobby = false) } }
     )
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
 
