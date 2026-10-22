@@ -123,11 +123,55 @@ fun LobbyBrowseScreen(
     val animatedLobbyIds = remember { mutableStateMapOf<String, Boolean>() }
 
     var showActiveLobbyAlert by remember { mutableStateOf(false) }
+    var showPendingPaymentBlockDialog by remember { mutableStateOf(false) }
 
     val hasActiveFilters = filters.destinationQuery.isNotBlank() ||
         filters.rideType != null ||
         filters.friendsOnly ||
         filters.sort != SortOption.NEWEST
+
+    if (showPendingPaymentBlockDialog) {
+        val owes = pendingPayment?.takeIf { !it.isPayer }
+        if (owes != null) {
+            AlertDialog(
+                onDismissRequest = { showPendingPaymentBlockDialog = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                title = { Text("Pending Payment Required", fontWeight = FontWeight.Bold) },
+                text = {
+                    val amountStr = if (owes.amount % 1.0 == 0.0) {
+                        "₹${owes.amount.toInt()}"
+                    } else {
+                        "₹${"%.2f".format(owes.amount)}"
+                    }
+                    Text("You have an unsettled payment of $amountStr for your previous ride to ${owes.destination}. Please clear it before creating a new lobby.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showPendingPaymentBlockDialog = false
+                            onOpenPaymentSplit(owes.lobbyId)
+                        }
+                    ) {
+                        Text("Pay now", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPendingPaymentBlockDialog = false }) {
+                        Text("Dismiss")
+                    }
+                }
+            )
+        } else {
+            showPendingPaymentBlockDialog = false
+        }
+    }
 
     if (showActiveLobbyAlert && activeLobby != null) {
         val active = activeLobby!!
@@ -230,7 +274,10 @@ fun LobbyBrowseScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (activeLobby != null) {
+                    val owes = pendingPayment?.takeIf { !it.isPayer }
+                    if (owes != null) {
+                        showPendingPaymentBlockDialog = true
+                    } else if (activeLobby != null) {
                         showActiveLobbyAlert = true
                     } else {
                         onCreateLobby()

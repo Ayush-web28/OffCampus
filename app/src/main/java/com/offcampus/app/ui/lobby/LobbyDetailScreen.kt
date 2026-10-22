@@ -85,6 +85,7 @@ fun LobbyDetailScreen(
     onOpenChat: () -> Unit,
     onOpenPostFare: () -> Unit,
     onOpenPaymentSplit: () -> Unit,
+    onOpenPaymentSplitForLobby: (String) -> Unit = {},
     onOpenProfile: (String) -> Unit = {},
     hasUnreadChat: Boolean = false,
     unreadChatCount: Int = 0
@@ -96,8 +97,53 @@ fun LobbyDetailScreen(
     val members by viewModel.members.collectAsStateWithLifecycle()
     val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
     val conflictOwnedLobby by viewModel.conflictOwnedLobby.collectAsStateWithLifecycle()
+    val pendingPaymentConflict by viewModel.pendingPaymentConflict.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showUnlockDialog by remember { mutableStateOf(false) }
+
+    if (pendingPaymentConflict != null) {
+        val conflict = pendingPaymentConflict!!
+        AlertDialog(
+            onDismissRequest = viewModel::dismissPendingPaymentConflict,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = { Text("Pending Payment Required", fontWeight = FontWeight.Bold) },
+            text = {
+                val amountStr = if (conflict.amount % 1.0 == 0.0) {
+                    "₹${conflict.amount.toInt()}"
+                } else {
+                    "₹${"%.2f".format(conflict.amount)}"
+                }
+                Text("You have an unsettled payment of $amountStr for your previous ride to ${conflict.destination}. Please clear it before joining this lobby.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val targetLobbyId = conflict.lobbyId
+                        viewModel.dismissPendingPaymentConflict()
+                        if (targetLobbyId.isNotBlank()) {
+                            onOpenPaymentSplitForLobby(targetLobbyId)
+                        } else {
+                            onOpenPaymentSplit()
+                        }
+                    }
+                ) {
+                    Text("Pay now", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissPendingPaymentConflict) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
 
     if (conflictOwnedLobby != null) {
         val owned = conflictOwnedLobby!!

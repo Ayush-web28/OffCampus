@@ -10,6 +10,7 @@ import com.offcampus.app.data.PlaceSearchService
 import com.offcampus.app.data.PlaceSuggestion
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
+import com.offcampus.app.data.model.PaymentSplit
 import com.offcampus.app.data.model.RideType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -69,6 +70,25 @@ class PostTripViewModel : ViewModel() {
         // Photon's cold-connection cost in the background so it's (hopefully) already paid by
         // the time they reach Gate or Destination. See PlaceSearchService.warmUp()'s own doc.
         viewModelScope.launch { PlaceSearchService.warmUp() }
+        viewModelScope.launch {
+            val uid = Firebase.auth.currentUser?.uid ?: return@launch
+            try {
+                val pendingSplits = FirebaseRefs.paymentSplits
+                    .whereArrayContains("participantIds", uid)
+                    .get().await()
+                    .documents
+                    .mapNotNull { doc -> doc.toObject(PaymentSplit::class.java) }
+                    .filter { split -> split.participants.any { it.userId == uid && !it.settled } }
+
+                if (pendingSplits.isNotEmpty()) {
+                    _formState.update {
+                        it.copy(
+                            errorMessage = "You have an unsettled payment for a previous ride. Please clear it before creating a new lobby."
+                        )
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     fun onCheckpointChange(value: String) = _formState.update { it.copy(checkpoint = value, errorMessage = null) }
@@ -178,6 +198,24 @@ class PostTripViewModel : ViewModel() {
         _formState.update { it.copy(isSubmitting = true, errorMessage = null) }
         viewModelScope.launch {
             try {
+                // Guard: Prevent posting if user has an unsettled payment for a previous ride
+                val pendingSplits = FirebaseRefs.paymentSplits
+                    .whereArrayContains("participantIds", uid)
+                    .get().await()
+                    .documents
+                    .mapNotNull { doc -> doc.toObject(PaymentSplit::class.java) }
+                    .filter { split -> split.participants.any { it.userId == uid && !it.settled } }
+
+                if (pendingSplits.isNotEmpty()) {
+                    _formState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = "You have an unsettled payment for a previous ride. Please clear it before creating a new lobby."
+                        )
+                    }
+                    return@launch
+                }
+
                 // Guard: Prevent posting if user already has an active lobby (OPEN or LOCKED)
                 val activeLobbies = FirebaseRefs.lobbies
                     .whereArrayContains("memberIds", uid)

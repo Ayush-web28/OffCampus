@@ -11,6 +11,7 @@ import com.offcampus.app.data.FirebaseRefs
 import com.offcampus.app.data.NotificationService
 import com.offcampus.app.data.model.Lobby
 import com.offcampus.app.data.model.LobbyStatus
+import com.offcampus.app.data.model.PaymentSplit
 import com.offcampus.app.data.model.Rider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+data class PendingPaymentBlockInfo(
+    val lobbyId: String,
+    val amount: Double,
+    val destination: String
+)
 
 /** One lobby, watched live so joins/leaves/locks from other members show up immediately. */
 class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
@@ -41,6 +48,13 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
 
     fun dismissConflictOwnedLobby() {
         _conflictOwnedLobby.value = null
+    }
+
+    private val _pendingPaymentConflict = MutableStateFlow<PendingPaymentBlockInfo?>(null)
+    val pendingPaymentConflict: StateFlow<PendingPaymentBlockInfo?> = _pendingPaymentConflict.asStateFlow()
+
+    fun dismissPendingPaymentConflict() {
+        _pendingPaymentConflict.value = null
     }
 
     private var listener: ListenerRegistration? = null
@@ -111,7 +125,32 @@ class LobbyDetailViewModel(private val lobbyId: String) : ViewModel() {
         viewModelScope.launch {
             _isUpdating.value = true
             try {
-                // Check if user currently hosts an active (OPEN or LOCKED) lobby
+                // 1. Guard: Check if user has an unsettled payment for a previous ride
+                val pendingSplits = FirebaseRefs.paymentSplits
+                    .whereArrayContains("participantIds", uid)
+                    .get().await()
+                    .documents
+                    .mapNotNull { doc -> doc.toObject(PaymentSplit::class.java)?.copy(id = doc.id) }
+                    .filter { split -> split.participants.any { it.userId == uid && !it.settled } }
+
+                if (pendingSplits.isNotEmpty()) {
+                    val mostRecent = pendingSplits.maxByOrNull { it.createdAt.seconds } ?: pendingSplits.first()
+                    val owed = mostRecent.participants.firstOrNull { it.userId == uid }?.owedAmount ?: 0.0
+                    val dest = try {
+                        FirebaseRefs.lobbies.document(mostRecent.lobbyId).get().await()
+                            .toObject(Lobby::class.java)?.destination
+                    } catch (_: Exception) { null } ?: "previous ride"
+
+                    _pendingPaymentConflict.value = PendingPaymentBlockInfo(
+                        lobbyId = mostRecent.lobbyId,
+                        amount = owed,
+                        destination = dest
+                    )
+                    _isUpdating.value = false
+                    return@launch
+                }
+
+                // 2. Check if user currently hosts an active (OPEN or LOCKED) lobby
                 val existingMasterLobbies = FirebaseRefs.lobbies
                     .whereEqualTo("createdBy", uid)
                     .whereIn("status", listOf(LobbyStatus.OPEN.name, LobbyStatus.LOCKED.name))

@@ -207,6 +207,7 @@ fun OffCampusNavHost() {
                         onOpenChat = { navController.navigate(Routes.lobbyChat(lobbyId)) },
                         onOpenPostFare = { navController.navigate(Routes.postFare(lobbyId)) },
                         onOpenPaymentSplit = { navController.navigate(Routes.paymentSplit(lobbyId)) },
+                        onOpenPaymentSplitForLobby = { targetId -> navController.navigate(Routes.paymentSplit(targetId)) },
                         onOpenProfile = openRiderProfile
                     )
                 }
